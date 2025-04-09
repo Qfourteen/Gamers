@@ -24,6 +24,12 @@ DATABASE_PASSWORD = "..."
 기능은 완성되기 전까지 가능하면 `main` 브렌치에서 commit을 넣지 말아주세요.
 해당 기능을 위한 브렌치를 만들어서 그 브렌치에서 작업해주세요.
 그리고 기능이 완성되면 pull request를 요청하여 병합하면 됩니다.
+정리하자면 아래 workflow를 따르면 됩니다.
+   1. [`https://github.com/Qfourteen/Gamers`](https://github.com/Qfourteen/Gamers)를 본인 컴퓨터에 clone합니다.
+   2. 브렌치를 만듭니다.
+   3. 그 브렌티로 이동합니다.
+   4. 이제 여기서 개발하면 됩니다.
+   5. 자세한 내용은 [`기여_상세.md`](기여_상세.md)
 
 ---
 
@@ -31,7 +37,7 @@ DATABASE_PASSWORD = "..."
 
 4. 문서 쓸 때는 맞춤법 지키기
 
-5. commit 하기 전에 작동하나 실행해보기.
+5. commit 한 번에 몰아서 하지 말고, 작업의 최소 단위가 완료될 때마다 commit 하기.
 
 ## 시작하기
 
