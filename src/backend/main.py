@@ -3,13 +3,13 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-from typing import Optional, List
+from typing import List
 
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from schemas.game_list import SearchResult, CardResult
-from schemas.game import Game, Card
+from models.game import Game, Card
 
 from env import *
 
