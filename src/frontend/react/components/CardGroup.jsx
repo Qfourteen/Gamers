@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 function CardGroup() {
   const [cards, setCards] = useState([]);
 
-  // 마운트 시 /data/card에서 카드 목록 가져오기
   useEffect(() => {
     fetch('/data/card')
       .then((res) => res.json())
@@ -16,16 +15,22 @@ function CardGroup() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+    <div className="row g-4">
       {cards.map((card, idx) => (
-        <div key={idx} style={{
-          border: '1px solid #ccc',
-          padding: '1rem',
-          width: '200px'
-        }}>
-          <h3>{card.title}</h3>
-          <p>{card.description}</p>
-        </div>
+        <a
+            href={card.game_id}
+            target="_blank"
+            className="col-sm-6 col-md-4 col-lg-3 text-decoration-none text-dark"
+            key={idx}
+        >
+            <div className="card h-100">
+              <img src={card.image_url} className="card-img-top" alt={card.card_title} />
+              <div className="card-body">
+                <small className="text-muted">{card.name}</small>
+                <h5 className="card-title">{card.card_title}</h5>
+              </div>
+            </div>
+        </a>
       ))}
     </div>
   );

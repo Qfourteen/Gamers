@@ -12,6 +12,7 @@ from schemas.game_list import SearchResult, CardResult
 from models.game import Game, Card
 
 from env import *
+from generate_dummy import get_data_card, get_data_search
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,9 +35,23 @@ async def index(request: Request):
 
 @app.get("/data/search")
 async def search_data(request: Request, response_model=List[SearchResult]):
-    pass
+    """
+    TODO: 카드 가져오는 올바른 로직이 필요함.
+    :param request:
+    :param response_model:
+    :return:
+    """
+    result = get_data_search()
+    return result
 
 
 @app.get("/data/card")
 async def card_data(request: Request, response_model=List[CardResult]):
-    pass
+    """
+    TODO: 카드 가져오는 올바른 로직이 필요함.
+    :param request:
+    :param response_model:
+    :return:
+    """
+    result = get_data_card()
+    return result

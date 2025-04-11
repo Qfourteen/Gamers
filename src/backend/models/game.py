@@ -1,4 +1,4 @@
-from beanie import Document
+from beanie import Document, Link
 from pydantic import Field
 from typing import Optional, List
 
@@ -10,7 +10,7 @@ class Game(Document):
     url: str
 
 class Card(Document):
-    name: str = Field(min_length=3, max_length=30)
+    game_id: Link[Game]
     card_body: str = Field(default="", max_length=200)
     image_url: str
     card_title: str = Field(min_length=3, max_length=100)

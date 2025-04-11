@@ -1,4 +1,4 @@
-Refactor: 관심사 분리 패턴 적용 - models와 schemas 분리
+Feat: 프론트엔드에서 SearchResult와 CardResult가 호환되게 만듦
 # #로 시작하는 줄은 주석입니다. 주석은 지우지 마세요!!
 # <Type>(<scope>): <제목> (가능하면 50자 이내, 마침표 없이)
 # -----type 목록-----
@@ -13,6 +13,8 @@ Refactor: 관심사 분리 패턴 적용 - models와 schemas 분리
 # - 어떤 변경을 했는지
 # - 왜 이 변경이 필요한지
 # - 추가적으로 알릴 사항이 있다면 여기에
+- 부트스트랩 라이브러리 추가(프론트엔드)
+- beanie mongodb odm 라이브러리 추가(백엔드)
 
 # Footer (이슈 번호 언급 등 등)
 # 예: 이슈 #123 해결
