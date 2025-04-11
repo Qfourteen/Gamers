@@ -3,4 +3,7 @@
 .idea
 __pycache__
 venv
-src/env.py
+src/backend/env.py
+node_modules
+package-lock.json
+src/backend/static
