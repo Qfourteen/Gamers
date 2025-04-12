@@ -33,24 +33,22 @@ async def index(request: Request):
     return FileResponse("./static/index.html")
 
 
-@app.get("/data/search")
-async def search_data(request: Request, response_model=List[SearchResult]):
+@app.get("/data/search", response_model=List[SearchResult])
+async def search_data(request: Request):
     """
     TODO: 카드 가져오는 올바른 로직이 필요함.
     :param request:
-    :param response_model:
     :return:
     """
     result = get_data_search()
     return result
 
 
-@app.get("/data/card")
-async def card_data(request: Request, response_model=List[CardResult]):
+@app.get("/data/card", response_model=List[CardResult])
+async def card_data(request: Request):
     """
     TODO: 카드 가져오는 올바른 로직이 필요함.
     :param request:
-    :param response_model:
     :return:
     """
     result = get_data_card()

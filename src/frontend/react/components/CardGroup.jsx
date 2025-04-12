@@ -20,6 +20,7 @@ function CardGroup() {
         <a
             href={card.game_id}
             target="_blank"
+            rel="noopener noreferrer"
             className="col-sm-6 col-md-4 col-lg-3 text-decoration-none text-dark"
             key={idx}
         >
