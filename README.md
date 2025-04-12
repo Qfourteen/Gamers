@@ -17,7 +17,7 @@ git commit -F .gitmessage
 2. (백엔드 개발에서) 외부 데이터베이스 주소같이 github에 올라가면 안 좋은 결과가 생길 데이터들이 있으면,
 코드에 데이터를 직접 넣지 말고 **env.py에** 다 몰아 넣어주세요. env.py는 `src/backend` 디렉터리 아래에 생성합니다.
 ```python
-# src/env.py
+# src/backend/env.py
 DATABASE_URL = "..."
 DATABASE_PASSWORD = "..."
 ```
