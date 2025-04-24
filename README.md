@@ -118,3 +118,14 @@ cd src/frontend && vite build
 데이터를 안정적으로 저장하고 처리하기 위해서는 데이터베이스가 필요합니다.
 데이터베이스는 데이터가 어떤 식으로 저장될지, 어떤 타입으로 저장될지 미리 정해야 합니다.
 [자세한 내용을 확인해보세요.](./docs/데이터구조/README.md)
+
+### Pygame
+
+#### 예제 기반 튜토리얼
+
+1. [창 열기](docs/how_to/pygame/open_window.md)
+2. [키보드 입력 감지](docs/how_to/pygame/keypress.md)
+3. [마우스 클릭 감지](docs/how_to/pygame/mouse_click.md)
+4. [화면 조정](docs/how_to/pygame/set_display.md)
+5. [충돌 감지](docs/how_to/pygame/colliderect.md)
+6. [음악 설정](docs/how_to/pygame/music.md)
