@@ -10,6 +10,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from schemas.game_list import SearchResult, CardResult
 from models.game import Game, Card
+from models.user import User
+
+from authentication.basic import basic_router
 
 from env import *
 from generate_dummy import get_data_card, get_data_search
@@ -17,11 +20,14 @@ from generate_dummy import get_data_card, get_data_search
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     client = AsyncIOMotorClient(MONGODB_URL)
-    await init_beanie(client.gamers, document_models=[Game, Card])
+    await init_beanie(client.gamers, document_models=[Game, Card, User])
     yield
     client.close()
 
 app = FastAPI(lifespan=lifespan)
+
+# 인증 라우터 추가
+app.include_router(basic_router, prefix="/auth", tags=["authentication"])
 
 # 정적 파일 서빙: 프론트엔드 빌드 결과물을 사용
 app.mount("/static", StaticFiles(directory="./static"), name="static")
