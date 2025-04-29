@@ -8,14 +8,14 @@ from typing import List
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from schemas.game_list import SearchResult, CardResult
-from models.game import Game, Card
-from models.user import User
+from src.backend.schemas.game_list import SearchResult, CardResult
+from src.backend.models.game import Game, Card
+from src.backend.models.user import User
 
-from authentication.basic import basic_router
+from src.backend.authentication.basic import basic_router
 
-from env import *
-from generate_dummy import get_data_card, get_data_search
+from src.backend.env import *
+from src.backend.generate_dummy import get_data_card, get_data_search
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
