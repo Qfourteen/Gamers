@@ -2,15 +2,16 @@ from fastapi import APIRouter, Request, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 from ..models.user import User
+from ..utility import is_valid_nickname
 
 # 보안 키 및 설정
-from ..env import SECRET_KEY
+from ..env import SECRET_KEY, SECURE_COOKIE
 TOKEN_EXPIRE_SECONDS = 18000  # 5시간
 COOKIE_NAME = "auth_token"  # 인증 쿠키 이름
 
@@ -21,13 +22,16 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 basic_router = APIRouter()
 
+
 class UserResponse(BaseModel):
     username: str
     disabled: bool = False
 
+
 class UserCreate(BaseModel):
     username: str
     password: str
+
 
 def hash_password(password: str) -> str:
     """
@@ -40,6 +44,7 @@ def hash_password(password: str) -> str:
         해싱된 비밀번호 문자열
     """
     return ph.hash(password)
+
 
 def verify_password(password: str, hashed_password: str) -> bool:
     """
@@ -58,6 +63,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
     except VerifyMismatchError:
         return False
 
+
 async def get_user(username: str) -> Optional[User]:
     """
     사용자 이름으로 데이터베이스에서 사용자를 조회합니다.
@@ -69,6 +75,7 @@ async def get_user(username: str) -> Optional[User]:
         사용자가 존재하면 User 객체, 존재하지 않으면 None
     """
     return await User.find_one(User.username == username)
+
 
 async def authenticate_user(username: str, password: str) -> Optional[User]:
     """
@@ -87,9 +94,10 @@ async def authenticate_user(username: str, password: str) -> Optional[User]:
     if not verify_password(password, user.hashed_password):
         return None
     # 로그인 시간 업데이트
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc)
     await user.save()
     return user
+
 
 def create_access_token(data: dict) -> str:
     """
@@ -102,6 +110,7 @@ def create_access_token(data: dict) -> str:
         생성된 액세스 토큰 문자열
     """
     return serializer.dumps(data)
+
 
 def verify_token(token: str) -> Optional[dict]:
     """
@@ -123,6 +132,7 @@ def verify_token(token: str) -> Optional[dict]:
         # 토큰이 유효하지 않음
         return None
 
+
 @basic_router.post("/login")
 async def login(credentials: HTTPBasicCredentials = Depends(security), response: Response = None):
     """
@@ -143,7 +153,6 @@ async def login(credentials: HTTPBasicCredentials = Depends(security), response:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Basic"},
         )
     
     # 토큰 생성
@@ -158,13 +167,14 @@ async def login(credentials: HTTPBasicCredentials = Depends(security), response:
         httponly=True,  # JavaScript에서 접근 불가
         max_age=TOKEN_EXPIRE_SECONDS,
         samesite="lax",  # CSRF 방지
-        secure=False  # 개발 환경에서는 HTTP 허용, 프로덕션은 True로 설정
+        secure=SECURE_COOKIE  # 개발 환경에서는 HTTP 허용, 프로덕션은 True로 설정
     )
     
     return {
         "message": "Login successful",
         "user": UserResponse(username=user.username, disabled=user.disabled)
     }
+
 
 @basic_router.post("/logout")
 async def logout(response: Response):
@@ -180,6 +190,7 @@ async def logout(response: Response):
     response.delete_cookie(key=COOKIE_NAME)
     return {"message": "Logout successful"}
 
+
 @basic_router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate):
     """
@@ -194,6 +205,14 @@ async def register_user(user_data: UserCreate):
     Raises:
         HTTPException: 이미 동일한 사용자 이름이 존재하는 경우
     """
+    # 사용할 수 있는 username인지 확인
+    is_valid = is_valid_nickname(user_data.username)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid username"
+        )
+
     # 기존 사용자 확인
     existing_user = await get_user(user_data.username)
     if existing_user:
@@ -214,6 +233,7 @@ async def register_user(user_data: UserCreate):
         disabled=user.disabled
     )
 
+
 async def get_current_user(request: Request) -> User:
     """
     쿠키에서 현재 인증된 사용자를 가져옵니다.
@@ -227,27 +247,31 @@ async def get_current_user(request: Request) -> User:
     Raises:
         HTTPException: 인증이 유효하지 않거나 사용자를 찾을 수 없는 경우
     """
+    # 쿠키가 없으면
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
-    
+
+    # 쿠키가 올바른지
     data = verify_token(token)
     if not data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired or invalid",
         )
-    
+
+    # 쿠키에 username이 있는지
     username = data.get("sub")
     if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    
+
+    # 그 username이 DB에 있는지
     user = await get_user(username)
     if not user:
         raise HTTPException(
@@ -256,6 +280,7 @@ async def get_current_user(request: Request) -> User:
         )
     
     return user
+
 
 @basic_router.get("/users/me", response_model=UserResponse)
 async def read_users_me(request: Request):
