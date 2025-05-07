@@ -15,7 +15,7 @@ function SearchResultsTable({ data }) {
   return (
     <Container className="py-3">
       <Card className="shadow-sm">
-        <Card.Header className="bg-light">
+        <Card.Header className="bg-primary-subtle">
           <strong>검색 결과: {data.length}개</strong>
         </Card.Header>
         <Table responsive hover bordered className="mb-0">
@@ -51,8 +51,10 @@ function SearchResultsTable({ data }) {
                       {row.tags.map((tag, tagIdx) => (
                         <Badge
                           key={tagIdx}
-                          bg="secondary"
+                          bg="dark"
                           className="d-flex align-items-center"
+                          onClick={() => window.open(`/tag/${tag}`, '_blank')}
+                          style={{ cursor: 'pointer' }}
                         >
                           <FaTag className="me-1" size={10} />
                           {tag}
