@@ -8,6 +8,9 @@ function NavBar() {
   {/* 모달 상태 관리 */}
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  
+  {/* 회원가입 폼 상태 관리 */}
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -20,15 +23,36 @@ function NavBar() {
 
   {/* 모달 닫기 핸들러 */}
   const handleCloseLogin = () => setShowLoginModal(false);
-  const handleCloseRegister = () => setShowRegisterModal(false);
+  const handleCloseRegister = () => {
+    setShowRegisterModal(false);
+    setTermsAgreed(false); // 모달 닫을 때 약관 동의 상태 초기화
+  };
 
   {/* 모달 열기 핸들러 */}
   const handleShowLogin = () => setShowLoginModal(true);
   const handleShowRegister = () => setShowRegisterModal(true);
   
   {/* 로그아웃 핸들러 */}
-  const handleLogout = () => {
-    window.location.href = '/auth/logout';
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // 로그아웃 성공 시 페이지 새로고침
+        window.location.reload();
+      } else {
+        console.error('로그아웃 실패:', data.message);
+      }
+    } catch (error) {
+      console.error('로그아웃 요청 중 오류 발생:', error);
+    }
   };
 
   {/* 내 정보 조회 핸들러 */}
@@ -44,7 +68,7 @@ function NavBar() {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
-              <Nav.Link href={"/"}>홈</Nav.Link>
+              <Nav.Link href={"/introduce"}>소개</Nav.Link>
               <Nav.Link href={"/policy"}>개인정보 처리 방침</Nav.Link>
             </Nav>
             <Nav>
@@ -118,14 +142,25 @@ function NavBar() {
               <Form.Label>비밀번호 확인</Form.Label>
               <Form.Control type="password" placeholder="비밀번호를 다시 입력하세요" />
             </Form.Group>
-            
+            <Form.Group className="mb-3" controlId="termsCheckbox">
+              <Form.Check 
+                type="checkbox" 
+                checked={termsAgreed}
+                onChange={(e) => setTermsAgreed(e.target.checked)}
+                label={
+                  <span>
+                    <a href="/policy" target="_blank" rel="noopener noreferrer">개인정보 처리 방침</a>에 동의합니다
+                  </span>
+                }
+              />
+            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseRegister}>
             취소
           </Button>
-          <Button variant="primary">
+          <Button variant="primary" disabled={!termsAgreed}>
             가입하기
           </Button>
         </Modal.Footer>
