@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Container, Button, Modal, Form } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import RegisterModal from './RegisterModal';
+import LoginModal from './LoginModal';
 
 function NavBar() {
   {/* 인증 상태 관리 */}
@@ -77,8 +78,8 @@ function NavBar() {
     }
   };
   
-  // 자동 로그인 처리
-  const autoLogin = async (username, password) => {
+  // 로그인 처리
+  const handleLogin = async (username, password) => {
     try {
       // HTTP Basic Auth에 필요한 인코딩 (username:password를 base64로 인코딩)
       const credentials = btoa(`${username}:${password}`);
@@ -90,14 +91,39 @@ function NavBar() {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        // 로그인 상태 업데이트
-        setIsAuthenticated(true);
-        return true;
+      // 응답 데이터 확인
+      const data = await response.json();
+      
+      // 로그인 실패 시
+      if (!response.ok) {
+        const errorMessage = data.detail || '로그인에 실패했습니다.';
+        return { 
+          success: false, 
+          message: errorMessage 
+        };
       }
       
-      return false;
+      // 로그인 성공 시
+      setIsAuthenticated(true);
+      return { 
+        success: true, 
+        message: `${username}님, 환영합니다!`,
+        user: data.user
+      };
+    } catch (error) {
+      console.error('로그인 처리 중 오류:', error);
+      return { 
+        success: false, 
+        message: '로그인 처리 중 오류가 발생했습니다.' 
+      };
+    }
+  };
+  
+  // 자동 로그인 처리 (회원가입 후)
+  const autoLogin = async (username, password) => {
+    try {
+      const result = await handleLogin(username, password);
+      return result.success;
     } catch (error) {
       console.error('자동 로그인 처리 중 오류:', error);
       return false;
@@ -118,16 +144,18 @@ function NavBar() {
         },
       });
       
-      const data = await response.json();
-      
-      if (data.success) {
-        // 로그아웃 성공 시 페이지 새로고침
-        window.location.reload();
+      if (response.ok) {
+        const data = await response.json();
+        // 로그아웃 성공
+        setIsAuthenticated(false);
+        alert('로그아웃 되었습니다.');
       } else {
-        console.error('로그아웃 실패:', data.message);
+        console.error('로그아웃 실패');
+        alert('로그아웃 처리 중 오류가 발생했습니다.');
       }
     } catch (error) {
       console.error('로그아웃 요청 중 오류 발생:', error);
+      alert('로그아웃 처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -173,31 +201,11 @@ function NavBar() {
       </Navbar>
       
       {/* 로그인 모달 */}
-      <Modal show={showLoginModal} onHide={handleCloseLogin}>
-        <Modal.Header closeButton>
-          <Modal.Title>로그인</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3" controlId="loginID">
-              <Form.Label>ID</Form.Label>
-              <Form.Control type="text" placeholder="ID를 입력하세요" />
-            </Form.Group>
-            <Form.Group className="mb-3" controlId="loginPassword">
-              <Form.Label>비밀번호</Form.Label>
-              <Form.Control type="password" placeholder="비밀번호를 입력하세요" />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseLogin}>
-            취소
-          </Button>
-          <Button variant="primary">
-            로그인
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <LoginModal 
+        show={showLoginModal} 
+        onHide={handleCloseLogin}
+        onLogin={handleLogin}
+      />
       
       {/* 회원가입 모달 */}
       <RegisterModal 
