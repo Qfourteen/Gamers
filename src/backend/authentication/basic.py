@@ -6,8 +6,9 @@ from src.backend.models.user import User
 from src.backend.utility import is_valid_nickname
 from src.backend.env import SECURE_COOKIE
 
+from src.backend.schemas.authentication import UserResponse, UserCreate, AccountAction
+
 from . import (
-    UserResponse, UserCreate, AccountAction,
     COOKIE_NAME, TOKEN_EXPIRE_SECONDS,
     get_user, authenticate_user, create_access_token, get_current_user,
     hash_password, verify_token

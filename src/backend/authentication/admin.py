@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 
 from src.backend.models.user import User
 
+from src.backend.schemas.authentication import UserResponse, AdminUserAction
+
 from . import (
-    UserResponse, AdminUserAction, 
     get_user, get_current_user, check_admin_permissions
 )
 
