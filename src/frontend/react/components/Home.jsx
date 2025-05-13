@@ -17,8 +17,10 @@ function Home() {
           {/* 검색창 */}
           <SearchBox onSearchResults={setSearchResults} />
 
-          {/* 검색 결과 표 */}
-          <SearchResultsTable data={searchResults} />
+        {/* 검색 결과 표. 검색 입력이 시작될 때만 표시되도록. */}
+        {searchResults.length > 0 && (
+            <SearchResultsTable data={searchResults}/>
+        )}
 
           {/* 카드 그룹 */}
         <CardGroup />
