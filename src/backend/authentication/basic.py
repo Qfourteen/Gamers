@@ -3,7 +3,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from datetime import datetime, timezone
 
 from src.backend.models.user import User
-from src.backend.utility import is_valid_nickname
+from src.backend.utility.nickname_utils import is_valid_nickname
 from src.backend.env import SECURE_COOKIE
 
 from src.backend.schemas.authentication import UserResponse, UserCreate, AccountAction

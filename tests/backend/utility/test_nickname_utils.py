@@ -1,7 +1,7 @@
 import pytest
 import regex
 import re
-from src.backend.utility import filter_nickname_characters, is_valid_nickname
+from src.backend.utility.nickname_utils import filter_nickname_characters, is_valid_nickname
 
 class TestFilterNicknameCharacters:
     """Tests for the filter_nickname_characters function."""
