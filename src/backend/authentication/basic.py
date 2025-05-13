@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from src.backend.models.user import User
 from src.backend.utility.nickname_utils import is_valid_nickname
+from src.backend.utility.password_utils import is_valid_password
 from src.backend.env import SECURE_COOKIE
 
 from src.backend.schemas.authentication import UserResponse, UserCreate, AccountAction
@@ -97,8 +98,9 @@ async def register_user(user_data: UserCreate):
         HTTPException: 이미 동일한 사용자 이름이 존재하는 경우
     """
     # 사용할 수 있는 username인지 확인
-    is_valid = is_valid_nickname(user_data.username)
-    if not is_valid:
+    is_valid1 = is_valid_nickname(user_data.username)
+    is_valid2 = is_valid_password(user_data.password)
+    if not is_valid1 or not is_valid2:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid username"
