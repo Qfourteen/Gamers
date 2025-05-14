@@ -46,6 +46,13 @@ templates = Jinja2Templates(directory="./templates")
 async def index(request: Request):
     return FileResponse("./static/index.html")
 
+@app.get("/introduce", response_class=HTMLResponse)
+async def introduce(request: Request):
+    return FileResponse("./static/introduce.html")
+
+@app.get("/policy", response_class=HTMLResponse)
+async def policy(request: Request):
+    return FileResponse("./static/policy.html")
 
 @app.get("/data/search", response_model=List[SearchResult])
 async def search_data(request: Request):
