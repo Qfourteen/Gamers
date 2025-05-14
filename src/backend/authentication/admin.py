@@ -473,15 +473,29 @@ async def admin_users_page(
 
 
 # API 엔드포인트 프리픽스 변경 (웹 페이지와의 구분을 위해)
+# 관리자 웹 인터페이스(/admin/...)와 API 엔드포인트(/api/admin/...)를 구분하기 위한 추가 라우터
 api_router = APIRouter(prefix="/api/admin")
 
 
 # 기존 API 엔드포인트를 새 라우터로 이동
+# 아래 wrapper 함수들은 관리자 웹 인터페이스의 모달 폼에서 사용되며,
+# templates/admin/users.html과 templates/admin/dashboard.html에서 JavaScript를 통해 호출됨
 @api_router.post("/users/disable", response_model=UserResponse)
 async def api_admin_disable_user(
         action: AdminUserAction,
         request: Request
 ):
+    """
+    사용자 비활성화 API 엔드포인트 (/api/admin/users/disable)
+    templates/admin/users.html (195줄)과 templates/admin/dashboard.html (144줄)에서 호출됨
+    
+    Args:
+        action: 비활성화할 사용자 이름과 이유
+        request: HTTP 요청 객체
+    
+    Returns:
+        원래 함수(admin_disable_user)의 결과를 그대로 반환
+    """
     return await admin_disable_user(action, request)
 
 
@@ -490,6 +504,17 @@ async def api_admin_enable_user(
         action: AdminUserAction,
         request: Request
 ):
+    """
+    사용자 활성화 API 엔드포인트 (/api/admin/users/enable)
+    templates/admin/users.html (205줄)과 templates/admin/dashboard.html (154줄)에서 호출됨
+    
+    Args:
+        action: 활성화할 사용자 이름
+        request: HTTP 요청 객체
+    
+    Returns:
+        원래 함수(admin_enable_user)의 결과를 그대로 반환
+    """
     return await admin_enable_user(action, request)
 
 
@@ -498,6 +523,17 @@ async def api_admin_promote_user(
         action: AdminUserAction,
         request: Request
 ):
+    """
+    사용자 관리자 승격 API 엔드포인트 (/api/admin/users/promote)
+    templates/admin/users.html (215줄)과 templates/admin/dashboard.html (164줄)에서 호출됨
+    
+    Args:
+        action: 관리자로 승격할 사용자 이름
+        request: HTTP 요청 객체
+    
+    Returns:
+        원래 함수(promote_to_admin)의 결과를 그대로 반환
+    """
     return await promote_to_admin(action, request)
 
 
@@ -506,6 +542,17 @@ async def api_admin_demote_user(
         action: AdminUserAction,
         request: Request
 ):
+    """
+    관리자 권한 제거 API 엔드포인트 (/api/admin/users/demote)
+    templates/admin/users.html (225줄)과 templates/admin/dashboard.html (174줄)에서 호출됨
+    
+    Args:
+        action: 권한을 제거할 관리자 이름
+        request: HTTP 요청 객체
+    
+    Returns:
+        원래 함수(demote_from_admin)의 결과를 그대로 반환
+    """
     return await demote_from_admin(action, request)
 
 
@@ -514,4 +561,15 @@ async def api_admin_list_users(
         request: Request,
         filter_options: UserFilter = UserFilter(),
 ):
+    """
+    사용자 목록 조회 API 엔드포인트 (/api/admin/users/list)
+    관리자 인터페이스에서 AJAX를 통해 사용자 목록을 동적으로 로드할 때 사용됨
+    
+    Args:
+        filter_options: 필터링 옵션 (비활성화 여부, 관리자 여부, 사용자 이름 포함 문자열)
+        request: HTTP 요청 객체
+    
+    Returns:
+        원래 함수(list_users)의 결과를 그대로 반환
+    """
     return await list_users(request, filter_options)
