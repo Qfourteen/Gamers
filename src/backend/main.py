@@ -14,6 +14,7 @@ from src.backend.models.game import Game, Card
 from src.backend.models.user import User
 
 from src.backend.authentication.basic import basic_router
+from src.backend.authentication.admin import admin_router, api_router
 from src.backend.utility.nickname_utils import is_valid_nickname, get_nickname_validation_rules
 from src.backend.utility.password_utils import is_valid_password, get_password_strength, get_password_validation_rules
 
@@ -31,6 +32,10 @@ app = FastAPI(lifespan=lifespan)
 
 # 인증 라우터 추가
 app.include_router(basic_router, prefix="/auth", tags=["authentication"])
+
+# 관리자 라우터 추가
+app.include_router(admin_router, tags=["admin"])
+app.include_router(api_router, tags=["admin-api"])
 
 # 정적 파일 서빙: 프론트엔드 빌드 결과물을 사용
 app.mount("/static", StaticFiles(directory="./static"), name="static")

@@ -1,0 +1,231 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}사용자 관리 - Gamers 관리자{% endblock %}
+{% block page_title %}사용자 관리{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">사용자 필터</h5>
+    </div>
+    <div class="card-body">
+        <form id="userFilterForm" action="/admin/users" method="get">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label for="username_contains" class="form-label">사용자명 포함</label>
+                    <input type="text" class="form-control" id="username_contains" name="username_contains" value="{{ filter_options.username_contains or '' }}">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label for="is_admin" class="form-label">관리자 여부</label>
+                    <select class="form-select" id="is_admin" name="is_admin">
+                        <option value="">모두</option>
+                        <option value="true" {% if filter_options.is_admin == true %}selected{% endif %}>관리자만</option>
+                        <option value="false" {% if filter_options.is_admin == false %}selected{% endif %}>일반 사용자만</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label for="disabled" class="form-label">계정 상태</label>
+                    <select class="form-select" id="disabled" name="disabled">
+                        <option value="">모두</option>
+                        <option value="true" {% if filter_options.disabled == true %}selected{% endif %}>비활성화</option>
+                        <option value="false" {% if filter_options.disabled == false %}selected{% endif %}>활성화</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">필터 적용</button>
+                </div>
+            </div>
+        </form>
+        
+        <script>
+        // 폼 제출 시 빈 파라미터 제거
+        document.getElementById('userFilterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+            
+            for (const [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    params.append(key, value);
+                }
+            }
+            
+            // 파라미터가 없으면 기본 URL로, 있으면 파라미터 추가
+            const url = params.toString() ? `/admin/users?${params.toString()}` : '/admin/users';
+            window.location.href = url;
+        });
+        </script>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">사용자 목록</h5>
+        <span class="badge bg-secondary">총 {{ users|length }}명</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>사용자명</th>
+                        <th>가입일</th>
+                        <th>마지막 로그인</th>
+                        <th>관리자</th>
+                        <th>상태</th>
+                        <th>비활성화 이유</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '없음' }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                            <span class="badge bg-success">관리자</span>
+                            {% else %}
+                            <span class="badge bg-secondary">일반</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.disabled %}
+                            <span class="badge bg-danger">비활성화</span>
+                            {% else %}
+                            <span class="badge bg-success">활성화</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.disabled_reason or '-' }}</td>
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    관리
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ loop.index }}">
+                                    {% if not user.disabled %}
+                                    <li>
+                                        <button class="dropdown-item disable-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#disableUserModal">
+                                            비활성화
+                                        </button>
+                                    </li>
+                                    {% else %}
+                                    <li>
+                                        <button class="dropdown-item enable-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#enableUserModal">
+                                            활성화
+                                        </button>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    {% if not user.is_admin %}
+                                    <li>
+                                        <button class="dropdown-item promote-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#promoteUserModal">
+                                            관리자 승격
+                                        </button>
+                                    </li>
+                                    {% else %}
+                                    <li>
+                                        <button class="dropdown-item demote-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#demoteUserModal">
+                                            관리자 강등
+                                        </button>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination.total_pages > 1 %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item {% if pagination.current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ pagination.first_page_url }}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item {% if pagination.current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ pagination.prev_page_url }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                
+                {% for page in pagination.pages_range %}
+                <li class="page-item {% if page == pagination.current_page %}active{% endif %}">
+                    <a class="page-link" href="{{ pagination.page_url(page) }}">{{ page }}</a>
+                </li>
+                {% endfor %}
+                
+                <li class="page-item {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ pagination.next_page_url }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ pagination.last_page_url }}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modals for all user actions -->
+{% include "admin/modals/user_modals.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Disable User
+    document.querySelectorAll('.disable-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('disableUserUsername').textContent = username;
+            document.getElementById('disableUserForm').action = `/api/admin/users/disable`;
+            document.getElementById('disableUserFormUsername').value = username;
+        });
+    });
+
+    // Enable User
+    document.querySelectorAll('.enable-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('enableUserUsername').textContent = username;
+            document.getElementById('enableUserForm').action = `/api/admin/users/enable`;
+            document.getElementById('enableUserFormUsername').value = username;
+        });
+    });
+
+    // Promote User
+    document.querySelectorAll('.promote-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('promoteUserUsername').textContent = username;
+            document.getElementById('promoteUserForm').action = `/api/admin/users/promote`;
+            document.getElementById('promoteUserFormUsername').value = username;
+        });
+    });
+
+    // Demote User
+    document.querySelectorAll('.demote-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('demoteUserUsername').textContent = username;
+            document.getElementById('demoteUserForm').action = `/api/admin/users/demote`;
+            document.getElementById('demoteUserFormUsername').value = username;
+        });
+    });
+});
+</script>
+{% endblock %}

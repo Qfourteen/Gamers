@@ -54,7 +54,6 @@ async def login(credentials: HTTPBasicCredentials = Depends(security), response:
     response.set_cookie(
         key=COOKIE_NAME,
         value=access_token,
-        httponly=True,  # JavaScript에서 접근 불가
         max_age=TOKEN_EXPIRE_SECONDS,
         samesite="lax",  # CSRF 방지
         secure=SECURE_COOKIE  # 개발 환경에서는 HTTP 허용, 프로덕션은 True로 설정
