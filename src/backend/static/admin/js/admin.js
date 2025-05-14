@@ -39,8 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(this.action, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': `auth_token=${authToken}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(jsonData),
                 credentials: 'same-origin'

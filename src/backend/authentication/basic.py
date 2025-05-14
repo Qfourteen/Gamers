@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 
 from src.backend.models.user import User
@@ -164,46 +165,47 @@ async def read_users_me(request: Request):
 
 @basic_router.post("/users/deactivate", response_model=UserResponse)
 async def deactivate_account(
-    action: AccountAction,
-    request: Request
+        action: AccountAction,
+        request: Request
 ):
     """
     자신의 계정을 비활성화합니다. (소프트 삭제)
-    
+
     Args:
         action: 비활성화 이유 (선택)
         request: HTTP 요청 객체
-        
+
     Returns:
         비활성화된 사용자 정보
     """
     current_user = await get_current_user(request)
-    
+
     # 이미 비활성화된 계정인지 확인
     if current_user.disabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Account is already disabled"
         )
-    
+
     # 계정 비활성화
     current_user.disabled = True
     current_user.disabled_reason = action.reason or "User requested account deactivation"
     current_user.disabled_at = datetime.now(timezone.utc)
     current_user.disabled_by = current_user.username  # 자신에 의한 비활성화
     await current_user.save()
-    
-    # 로그아웃 처리 (쿠키 삭제)
-    response = Response()
-    response.delete_cookie(key=COOKIE_NAME)
-    
-    return UserResponse(
+
+    user_response = UserResponse(
         username=current_user.username,
         disabled=current_user.disabled,
         is_admin=current_user.is_admin,
         disabled_reason=current_user.disabled_reason,
         disabled_at=current_user.disabled_at
     )
+
+    response = JSONResponse(content=user_response.model_dump_json())
+    response.delete_cookie(key=COOKIE_NAME, path="/")
+
+    return response
 
 
 @basic_router.post("/users/reactivate", response_model=UserResponse)
