@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import RegisterModal from './RegisterModal';
 import LoginModal from './LoginModal';
+import UserInfoModal from './UserInfoModal';
 
 function NavBar() {
   {/* 인증 상태 관리 */}
@@ -10,6 +11,8 @@ function NavBar() {
   {/* 모달 상태 관리 */}
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showMyInfoModal, setShowMyInfoModal] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
 
 
   useEffect(() => {
@@ -24,6 +27,7 @@ function NavBar() {
   {/* 모달 핸들러 */}
   const handleCloseLogin = () => setShowLoginModal(false);
   const handleCloseRegister = () => setShowRegisterModal(false);
+  const handleCloseMyInfo = () => setShowMyInfoModal(false);
   
   {/* 회원가입 처리 */}
   const handleRegister = async (userData) => {
@@ -160,8 +164,28 @@ function NavBar() {
   };
 
   {/* 내 정보 조회 핸들러 */}
-  const handleMyInfo = () => {
-    window.location.href = '/auth/users/me';
+  const handleMyInfo = async () => {
+    try {
+      const response = await fetch('/auth/users/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserInfo(data);
+        setShowMyInfoModal(true);
+      } else {
+        const error = await response.json();
+        console.error('내 정보 조회 실패:', error);
+        alert('내 정보를 불러오는 데 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('내 정보 요청 중 오류 발생:', error);
+      alert('내 정보를 불러오는 데 오류가 발생했습니다.');
+    }
   };
 
   return (
@@ -212,6 +236,13 @@ function NavBar() {
         show={showRegisterModal} 
         onHide={handleCloseRegister}
         onRegister={handleRegister}
+      />
+      
+      {/* 내 정보 모달 */}
+      <UserInfoModal 
+        show={showMyInfoModal} 
+        onHide={handleCloseMyInfo}
+        userInfo={userInfo} 
       />
     </>
   );

@@ -40,7 +40,11 @@ async def login(credentials: HTTPBasicCredentials = Depends(security), response:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
-    
+    if user.disabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is disabled. Reason: {user.disabled_reason}"
+        )
     # 토큰 생성
     access_token = create_access_token(
         data={"sub": user.username}
