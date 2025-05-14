@@ -1,0 +1,99 @@
+<!-- Disable User Modal -->
+<div class="modal fade" id="disableUserModal" tabindex="-1" aria-labelledby="disableUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="disableUserModalLabel">사용자 비활성화</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="disableUserForm" method="post">
+                <div class="modal-body">
+                    <p>사용자 <strong id="disableUserUsername"></strong>을(를) 비활성화하시겠습니까?</p>
+                    <div class="mb-3">
+                        <label for="disableReason" class="form-label">비활성화 이유 (선택사항)</label>
+                        <textarea class="form-control" id="disableReason" name="reason" rows="3"></textarea>
+                    </div>
+                    <input type="hidden" id="disableUserFormUsername" name="username" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-danger">비활성화</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Enable User Modal -->
+<div class="modal fade" id="enableUserModal" tabindex="-1" aria-labelledby="enableUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="enableUserModalLabel">사용자 활성화</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="enableUserForm" method="post">
+                <div class="modal-body">
+                    <p>사용자 <strong id="enableUserUsername"></strong>을(를) 활성화하시겠습니까?</p>
+                    <input type="hidden" id="enableUserFormUsername" name="username" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-success">활성화</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Promote User Modal -->
+<div class="modal fade" id="promoteUserModal" tabindex="-1" aria-labelledby="promoteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promoteUserModalLabel">관리자 승격</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="promoteUserForm" method="post">
+                <div class="modal-body">
+                    <p>사용자 <strong id="promoteUserUsername"></strong>을(를) 관리자로 승격하시겠습니까?</p>
+                    <div class="mb-3">
+                        <label for="promoteReason" class="form-label">승격 이유 (선택사항)</label>
+                        <textarea class="form-control" id="promoteReason" name="reason" rows="3"></textarea>
+                    </div>
+                    <input type="hidden" id="promoteUserFormUsername" name="username" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">승격</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Demote User Modal -->
+<div class="modal fade" id="demoteUserModal" tabindex="-1" aria-labelledby="demoteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="demoteUserModalLabel">관리자 권한 제거</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="demoteUserForm" method="post">
+                <div class="modal-body">
+                    <p>사용자 <strong id="demoteUserUsername"></strong>의 관리자 권한을 제거하시겠습니까?</p>
+                    <div class="mb-3">
+                        <label for="demoteReason" class="form-label">권한 제거 이유 (선택사항)</label>
+                        <textarea class="form-control" id="demoteReason" name="reason" rows="3"></textarea>
+                    </div>
+                    <input type="hidden" id="demoteUserFormUsername" name="username" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-warning">권한 제거</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

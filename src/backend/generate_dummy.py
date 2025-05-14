@@ -1,4 +1,4 @@
-from schemas.game_list import SearchResult, CardResult
+from src.backend.schemas.game_list import SearchResult, CardResult
 from typing import List, Optional
 
 def get_data_search() -> List[SearchResult]:
