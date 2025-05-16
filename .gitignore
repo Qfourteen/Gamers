@@ -2,9 +2,12 @@
 .vscode
 .idea
 __pycache__
+CLAUDE.md
 venv
 src/backend/env.py
+# react
 node_modules
 package-lock.json
-src/backend/static
-CLAUDE.md
+src/backend/static/assets
+src/backend/static/js
+src/backend/static/index.html

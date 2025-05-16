@@ -9,8 +9,14 @@ class Game(Document):
     tags: List[str] = Field(default_factory=list)
     url: str
 
+    class Settings:
+        name = "games"
+
 class Card(Document):
     game_id: Link[Game]
     card_body: str = Field(default="", max_length=200)
     image_url: str
     card_title: str = Field(min_length=3, max_length=100)
+
+    class Settings:
+        name = "cards"

@@ -1,0 +1,180 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}대시보드 - Gamers 관리자{% endblock %}
+{% block page_title %}대시보드{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">총 사용자</h5>
+                <p class="card-text display-4">{{ stats.total_users }}</p>
+            </div>
+            <div class="card-footer">
+                <a href="/admin/users" class="card-link">사용자 목록 보기</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">관리자</h5>
+                <p class="card-text display-4">{{ stats.admin_users }}</p>
+            </div>
+            <div class="card-footer">
+                <a href="/admin/users?is_admin=true" class="card-link">관리자 목록 보기</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">비활성화 사용자</h5>
+                <p class="card-text display-4">{{ stats.disabled_users }}</p>
+            </div>
+            <div class="card-footer">
+                <a href="/admin/users?disabled=true" class="card-link">비활성화 사용자 보기</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Users -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">최근 가입 사용자</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>사용자명</th>
+                                <th>가입일</th>
+                                <th>마지막 로그인</th>
+                                <th>관리자</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '없음' }}</td>
+                                <td>
+                                    {% if user.is_admin %}
+                                    <span class="badge bg-success">관리자</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">일반</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.disabled %}
+                                    <span class="badge bg-danger">비활성화</span>
+                                    {% else %}
+                                    <span class="badge bg-success">활성화</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            관리
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ loop.index }}">
+                                            {% if not user.disabled %}
+                                            <li>
+                                                <button class="dropdown-item disable-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#disableUserModal">
+                                                    비활성화
+                                                </button>
+                                            </li>
+                                            {% else %}
+                                            <li>
+                                                <button class="dropdown-item enable-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#enableUserModal">
+                                                    활성화
+                                                </button>
+                                            </li>
+                                            {% endif %}
+                                            
+                                            {% if not user.is_admin %}
+                                            <li>
+                                                <button class="dropdown-item promote-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#promoteUserModal">
+                                                    관리자 승격
+                                                </button>
+                                            </li>
+                                            {% else %}
+                                            <li>
+                                                <button class="dropdown-item demote-user" data-username="{{ user.username }}" data-bs-toggle="modal" data-bs-target="#demoteUserModal">
+                                                    관리자 강등
+                                                </button>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/admin/users" class="card-link">모든 사용자 보기</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for all user actions -->
+{% include "admin/modals/user_modals.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Disable User
+    document.querySelectorAll('.disable-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('disableUserUsername').textContent = username;
+            document.getElementById('disableUserForm').action = `/api/admin/users/disable`;
+            document.getElementById('disableUserFormUsername').value = username;
+        });
+    });
+
+    // Enable User
+    document.querySelectorAll('.enable-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('enableUserUsername').textContent = username;
+            document.getElementById('enableUserForm').action = `/api/admin/users/enable`;
+            document.getElementById('enableUserFormUsername').value = username;
+        });
+    });
+
+    // Promote User
+    document.querySelectorAll('.promote-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('promoteUserUsername').textContent = username;
+            document.getElementById('promoteUserForm').action = `/api/admin/users/promote`;
+            document.getElementById('promoteUserFormUsername').value = username;
+        });
+    });
+
+    // Demote User
+    document.querySelectorAll('.demote-user').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            document.getElementById('demoteUserUsername').textContent = username;
+            document.getElementById('demoteUserForm').action = `/api/admin/users/demote`;
+            document.getElementById('demoteUserFormUsername').value = username;
+        });
+    });
+});
+</script>
+{% endblock %}
