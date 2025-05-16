@@ -1,0 +1,169 @@
+import pygame
+import sys
+import random
+
+pygame.init()
+WIDTH, HEIGHT = 800, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Chrome Dino Game Clone")
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BROWN = (101, 67, 33)
+CLOUD_COLOR = (200, 200, 200)
+
+clock = pygame.time.Clock()
+game_speed = 5
+
+# 폰트 설정
+font = pygame.font.Font(None, 36)
+large_font = pygame.font.Font(None, 72)
+
+# 점수 변수
+score = 0
+start_ticks = pygame.time.get_ticks()
+is_game_over = False
+
+# 공룡 설정
+dino_size = (50, 50)
+dino = pygame.Rect(80, HEIGHT - dino_size[1] - 20, *dino_size)
+
+dino_jump = False
+jump_speed = 15
+gravity = 0.9
+
+# 장애물 설정
+obstacles = []
+obstacle_timer = 0
+MIN_WIDTH = 20
+MAX_WIDTH = 60
+OBSTACLE_HEIGHT = 40
+
+# 구름 설정
+clouds = []
+CLOUD_SPEED = 1
+CLOUD_MIN_Y = 30
+CLOUD_MAX_Y = 100
+
+def create_cloud():
+    x = WIDTH + random.randint(50, 150)
+    y = random.randint(CLOUD_MIN_Y, CLOUD_MAX_Y)
+    size = random.randint(40, 80)
+    return [x, y, size]
+
+def reset_game():
+    """게임을 초기화하는 함수"""
+    global score, start_ticks, obstacles, dino, is_game_over
+    score = 0
+    start_ticks = pygame.time.get_ticks()
+    obstacles.clear()
+    dino.y = HEIGHT - dino_size[1] - 20
+    is_game_over = False
+
+for _ in range(5):
+    clouds.append(create_cloud())
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and not dino_jump and not is_game_over:
+                dino_jump = True
+            if event.key == pygame.K_r and is_game_over:
+                reset_game()
+
+    if not is_game_over:
+        # 1초마다 점수 증가
+        seconds = (pygame.time.get_ticks() - start_ticks) // 1000
+        score = seconds
+
+        # 장애물 생성
+        if obstacle_timer == 0:
+            width = random.randint(MIN_WIDTH, MAX_WIDTH)
+            obstacle = pygame.Rect(WIDTH, HEIGHT - OBSTACLE_HEIGHT - 20, width, OBSTACLE_HEIGHT)
+            obstacles.append(obstacle)
+            obstacle_timer = random.randint(40, 100)
+        else:
+            obstacle_timer -= 1
+
+        # 공룡 점프 처리
+        if dino_jump:
+            dino.y -= jump_speed
+            jump_speed -= gravity
+            if jump_speed < -15:
+                dino_jump = False
+                jump_speed = 15
+            
+            # 땅에 닿았으면 위치를 고정하고 초기화
+            if dino.y >= HEIGHT - dino_size[1] - 20:
+                dino.y = HEIGHT - dino_size[1] - 20
+                dino_jump = False
+                jump_speed = 15
+
+
+        # 장애물 이동
+        for obstacle in obstacles[:]:
+            obstacle.x -= game_speed
+            if obstacle.x < -obstacle.width:
+                obstacles.remove(obstacle)
+
+        # 충돌 체크
+        if any(dino.colliderect(obstacle) for obstacle in obstacles):
+            is_game_over = True
+
+    # 구름 이동
+    for cloud in clouds[:]:
+        cloud[0] -= CLOUD_SPEED
+        if cloud[0] < -cloud[2]:
+            clouds.remove(cloud)
+            clouds.append(create_cloud())
+
+    # 배경 그리기
+    screen.fill(WHITE)
+
+    # 구름 그리기
+    for x, y, size in clouds:
+        pygame.draw.circle(screen, CLOUD_COLOR, (int(x), int(y)), size // 3)
+        pygame.draw.circle(screen, CLOUD_COLOR, (int(x + size // 3), int(y + size // 6)), size // 4)
+        pygame.draw.circle(screen, CLOUD_COLOR, (int(x + size // 2), int(y)), size // 3)
+
+    # 공룡 그리기 (몸통)
+    pygame.draw.rect(screen, BLACK, dino)
+
+    # 공룡 귀 (좌우 삼각형 두 개, 넓게 벌어진 형태)
+    pygame.draw.polygon(screen, BLACK, [
+        (dino.x, dino.y),
+        (dino.x + 15, dino.y - 20),
+        (dino.x + 30, dino.y)
+    ])
+    pygame.draw.polygon(screen, BLACK, [
+        (dino.x + dino.width, dino.y),
+        (dino.x + dino.width - 15, dino.y - 20),
+        (dino.x + dino.width - 30, dino.y)
+    ])
+
+    # 장애물 그리기
+    for obstacle in obstacles:
+        points = [
+            (obstacle.x, obstacle.y + obstacle.height),
+            (obstacle.x + 10, obstacle.y),
+            (obstacle.x + obstacle.width - 10, obstacle.y),
+            (obstacle.x + obstacle.width, obstacle.y + obstacle.height)
+        ]
+        pygame.draw.polygon(screen, BROWN, points)
+
+    # 점수 표시
+    score_text = font.render(f"Score: {score}", True, BLACK)
+    screen.blit(score_text, (10, 10))
+
+    # 게임 오버 화면 표시
+    if is_game_over:
+        game_over_text = large_font.render("Game Over", True, BLACK)
+        restart_text = font.render("Press R to Restart", True, BLACK)
+        screen.blit(game_over_text, (WIDTH // 2 - 150, HEIGHT // 2 - 50))
+        screen.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 20))
+
+    pygame.display.flip()
+    clock.tick(60)
