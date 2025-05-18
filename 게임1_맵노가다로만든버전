@@ -1,0 +1,115 @@
+# 만들거
+# 1. 배경맵 만들고 오브젝트 배치
+# 2. 기본 재생 사운드 / 사망 시 사운드 재생
+# 3. 캐릭터 에셋 다운로드 후 적용
+# 4. (시간남으면) 움직이는 적 오브젝트 배치
+# 5. (시간남으면) 보스 오브젝트 배치
+
+
+
+import pygame
+import sys
+
+# 초기화
+pygame.init()
+screen = pygame.display.set_mode((1400, 700))
+clock = pygame.time.Clock()
+
+TILE_SIZE = 32
+
+x, y = 100, 500
+width, height = 10, 10
+speed = 5
+
+y_vel = 0 # y축 속도
+gravity = 0.8 # 값이 클수록 빨리 낙하
+jump_power = -14 # 값이 작을수록 높이 점프
+jump_release_damping = 0.5 # 스페이스바를 조금만 누르면 약하게 점프함
+jump_count = 0 # 점프 횟수 체크
+max_jumps = 2
+
+ground_level = 500 # 바닥 y좌표 (나중에 오브젝트랑 충돌하는 거로 변경)
+is_jumping = False
+
+# 맵 리스트 (배경 이미지 또는 타일로 구성)
+#maps = ["map1.png", "map2.png", "map3.png"]  # 실제 경로는 실제 이미지 파일로 설정
+#current_map_index = 0  # 현재 맵 인덱스
+
+# 배경 이미지 불러오기 (나중에 이미지 파일 불러와서 변경)
+background = pygame.image.load("C:\\Program Files\\Microsoft VS Code\\coastal_landscape.png")  # 이미지 경로에 맞게 수정
+background = pygame.transform.scale(background, (1440, 960))  # 화면 크기에 맞게 조절
+
+# 타일 이미지 불러오기
+tile_img = pygame.image.load("C:\\Program Files\\Microsoft VS Code\\gpt가만들어준땅(표면)이미지.png")
+tile_img = pygame.transform.scale(tile_img, (TILE_SIZE, TILE_SIZE))
+
+# 간단한 타일 맵
+tilemap = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+]
+
+def draw_map():
+    for y, row in enumerate(tilemap):
+        for x, tile in enumerate(row):
+            if tile == 1:
+                screen.blit(tile_img, (x * TILE_SIZE, y * TILE_SIZE))
+# 메인 루프
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and jump_count < max_jumps:
+                y_vel = jump_power
+                jump_count += 1
+                jumping = True
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE and y_vel < 0:
+                y_vel *= jump_release_damping # 위로 튕기는 힘 감소
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        x -= speed
+    if keys[pygame.K_RIGHT]:
+        x += speed
+
+    y_vel += gravity
+    y += y_vel
+
+    if y >= ground_level: # 바닥 충돌 처리
+        y = ground_level
+        y_vel = 0
+        jump_count = 0 # 바닥에 닿으면 점프 횟수 초기화
+    
+    screen.blit(background, (0, 0))  # 배경 이미지 그리기
+    pygame.draw.rect(screen, (0, 255, 0), (x, y, 20, 20))
+
+    draw_map()
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
