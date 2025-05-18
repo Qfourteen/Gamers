@@ -1,0 +1,75 @@
+import pygame
+import sys
+
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+clock = pygame.time.Clock()
+
+# 색상
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+
+# 플레이어 설정
+player = pygame.Rect(100, 500, 30, 30)
+player_speed = 5
+y_vel = 0
+gravity = 0.8
+jump_power = -15
+jump_count = 0
+max_jumps = 2
+
+# 바닥
+ground = pygame.Rect(0, 550, 800, 50)
+
+# 가시
+spike = pygame.Rect(400, 520, 30, 30)
+
+def reset_player():
+    player.x = 100
+    player.y = 500
+    global y_vel, jump_count
+    y_vel = 0
+    jump_count = 0
+
+running = True
+while running:
+    screen.fill(WHITE)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        # 점프 키 입력
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and jump_count < max_jumps:
+                y_vel = jump_power
+                jump_count += 1
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        player.x -= player_speed
+    if keys[pygame.K_RIGHT]:
+        player.x += player_speed
+
+    # 중력 적용
+    y_vel += gravity
+    player.y += y_vel
+
+    # 바닥 충돌 처리
+    if player.colliderect(ground):
+        player.y = ground.top - player.height
+        y_vel = 0
+        jump_count = 0
+
+    # 가시 충돌 시 리셋
+    if player.colliderect(spike):
+        reset_player()
+
+    # 요소 그리기
+    pygame.draw.rect(screen, GREEN, ground)
+    pygame.draw.rect(screen, RED, spike)
+    pygame.draw.rect(screen, (0, 0, 255), player)
+
+    pygame.display.flip()
+    clock.tick(60)
