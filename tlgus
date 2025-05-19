@@ -1,169 +1,232 @@
 import pygame
-import sys
 import random
 
+# 초기화
 pygame.init()
 WIDTH, HEIGHT = 800, 400
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Chrome Dino Game Clone")
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Chrome Dino Game - Simplified")
+CLOCK = pygame.time.Clock()
 
+# 색상 정의 (흑백)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-BROWN = (101, 67, 33)
-CLOUD_COLOR = (200, 200, 200)
-
-clock = pygame.time.Clock()
-game_speed = 5
-
-# 폰트 설정
-font = pygame.font.Font(None, 36)
-large_font = pygame.font.Font(None, 72)
-
-# 점수 변수
-score = 0
-start_ticks = pygame.time.get_ticks()
-is_game_over = False
+GRAY = (120, 120, 120)
 
 # 공룡 설정
-dino_size = (50, 50)
-dino = pygame.Rect(80, HEIGHT - dino_size[1] - 20, *dino_size)
+DINO_WIDTH, DINO_HEIGHT = 40, 60
+DINO_Y_POS = HEIGHT - DINO_HEIGHT - 20
+GRAVITY = 0.6
 
-dino_jump = False
-jump_speed = 15
-gravity = 0.9
+class Dino:
+    def __init__(self):
+        self.rect = pygame.Rect(50, DINO_Y_POS, DINO_WIDTH, DINO_HEIGHT)
+        self.velocity = 0
+        self.is_jumping = False
 
-# 장애물 설정
-obstacles = []
-obstacle_timer = 0
-MIN_WIDTH = 20
-MAX_WIDTH = 60
-OBSTACLE_HEIGHT = 40
+    def jump(self):
+        if not self.is_jumping:
+            self.velocity = -12
+            self.is_jumping = True
 
-# 구름 설정
-clouds = []
-CLOUD_SPEED = 1
-CLOUD_MIN_Y = 30
-CLOUD_MAX_Y = 100
+    def update(self):
+        self.velocity += GRAVITY
+        self.rect.y += self.velocity
+        if self.rect.y >= DINO_Y_POS:
+            self.rect.y = DINO_Y_POS
+            self.is_jumping = False
 
-def create_cloud():
-    x = WIDTH + random.randint(50, 150)
-    y = random.randint(CLOUD_MIN_Y, CLOUD_MAX_Y)
-    size = random.randint(40, 80)
-    return [x, y, size]
+    def draw(self, screen, inverted=False):
+        color = WHITE if inverted else BLACK
+        eye_color = BLACK if inverted else WHITE
+        pygame.draw.rect(screen, color, self.rect)
+        eye_x = self.rect.x + 30
+        eye_y = self.rect.y + 15
+        pygame.draw.circle(screen, eye_color, (eye_x, eye_y), 4)
 
-def reset_game():
-    """게임을 초기화하는 함수"""
-    global score, start_ticks, obstacles, dino, is_game_over
-    score = 0
-    start_ticks = pygame.time.get_ticks()
-    obstacles.clear()
-    dino.y = HEIGHT - dino_size[1] - 20
-    is_game_over = False
+class Obstacle:
+    def __init__(self, speed):
+        self.speed = speed
+        self.width = random.randint(15, 35)  # 두께 랜덤 지정 (15~35)
+        self.height = 40
+        self.rect = pygame.Rect(WIDTH, HEIGHT - self.height - 20, self.width, self.height)
 
-for _ in range(5):
-    clouds.append(create_cloud())
+    def update(self):
+        self.rect.x -= self.speed
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and not dino_jump and not is_game_over:
-                dino_jump = True
-            if event.key == pygame.K_r and is_game_over:
-                reset_game()
+    def draw(self, screen, inverted=False):
+        color = WHITE if inverted else BLACK
+        pygame.draw.rect(screen, color, self.rect)
 
-    if not is_game_over:
-        # 1초마다 점수 증가
-        seconds = (pygame.time.get_ticks() - start_ticks) // 1000
-        score = seconds
+class Cloud:
+    def __init__(self):
+        self.width = random.randint(60, 100)
+        self.height = 30
+        self.x = WIDTH + random.randint(0, 300)
+        self.y = random.randint(50, 150)
+        self.speed = 3  # 속도 업
 
-        # 장애물 생성
-        if obstacle_timer == 0:
-            width = random.randint(MIN_WIDTH, MAX_WIDTH)
-            obstacle = pygame.Rect(WIDTH, HEIGHT - OBSTACLE_HEIGHT - 20, width, OBSTACLE_HEIGHT)
-            obstacles.append(obstacle)
-            obstacle_timer = random.randint(40, 100)
+    def update(self):
+        self.x -= self.speed
+        if self.x + self.width < 0:
+            self.x = WIDTH + random.randint(50, 300)
+            self.y = random.randint(50, 150)
+
+    def draw(self, screen, inverted=False):
+        color = GRAY if not inverted else (255 - GRAY[0], 255 - GRAY[1], 255 - GRAY[2])
+        pygame.draw.ellipse(screen, color, (self.x, self.y, self.width, self.height))
+        pygame.draw.ellipse(screen, color, (self.x + self.width//2, self.y - 10, self.width//2, self.height))
+
+class Background:
+    def __init__(self, speed):
+        self.x1 = 0
+        self.x2 = WIDTH
+        self.speed = speed
+        self.clouds = [Cloud() for _ in range(3)]
+
+    def update(self):
+        self.x1 -= self.speed
+        self.x2 -= self.speed
+        if self.x1 + WIDTH <= 0:
+            self.x1 = self.x2 + WIDTH
+        if self.x2 + WIDTH <= 0:
+            self.x2 = self.x1 + WIDTH
+
+        for cloud in self.clouds:
+            cloud.update()
+
+    def draw(self, screen, inverted=False):
+        if inverted:
+            screen.fill(BLACK)
         else:
-            obstacle_timer -= 1
+            screen.fill(WHITE)
+        for cloud in self.clouds:
+            cloud.draw(screen, inverted)
+        ground_color = WHITE if inverted else BLACK
+        pygame.draw.rect(screen, ground_color, (self.x1, HEIGHT - 20, WIDTH, 20))
+        pygame.draw.rect(screen, ground_color, (self.x2, HEIGHT - 20, WIDTH, 20))
 
-        # 공룡 점프 처리
-        if dino_jump:
-            dino.y -= jump_speed
-            jump_speed -= gravity
-            if jump_speed < -15:
-                dino_jump = False
-                jump_speed = 15
-            
-            # 땅에 닿았으면 위치를 고정하고 초기화
-            if dino.y >= HEIGHT - dino_size[1] - 20:
-                dino.y = HEIGHT - dino_size[1] - 20
-                dino_jump = False
-                jump_speed = 15
+def draw_sun(screen, inverted=False):
+    # 오른쪽 상단 고정 위치
+    x, y = WIDTH - 80, 80
+    sun_color = WHITE if inverted else BLACK
+    pygame.draw.circle(screen, sun_color, (x, y), 30)
+    # 간단한 해 광선 표현 (4개)
+    for i in range(4):
+        angle = i * 90
+        length = 40
+        dx = int(length * pygame.math.Vector2(1, 0).rotate(angle).x)
+        dy = int(length * pygame.math.Vector2(1, 0).rotate(angle).y)
+        pygame.draw.line(screen, sun_color, (x, y), (x + dx, y + dy), 3)
 
+def draw_moon(screen):
+    # 오른쪽 상단 고정 위치
+    x, y = WIDTH - 80, 80
+    moon_color = WHITE
+    pygame.draw.circle(screen, moon_color, (x, y), 30)
+    # 달의 음영 (초승달 모양)
+    pygame.draw.circle(screen, BLACK, (x + 10, y - 5), 20)
 
-        # 장애물 이동
-        for obstacle in obstacles[:]:
-            obstacle.x -= game_speed
-            if obstacle.x < -obstacle.width:
-                obstacles.remove(obstacle)
-
-        # 충돌 체크
-        if any(dino.colliderect(obstacle) for obstacle in obstacles):
-            is_game_over = True
-
-    # 구름 이동
-    for cloud in clouds[:]:
-        cloud[0] -= CLOUD_SPEED
-        if cloud[0] < -cloud[2]:
-            clouds.remove(cloud)
-            clouds.append(create_cloud())
-
-    # 배경 그리기
-    screen.fill(WHITE)
-
-    # 구름 그리기
-    for x, y, size in clouds:
-        pygame.draw.circle(screen, CLOUD_COLOR, (int(x), int(y)), size // 3)
-        pygame.draw.circle(screen, CLOUD_COLOR, (int(x + size // 3), int(y + size // 6)), size // 4)
-        pygame.draw.circle(screen, CLOUD_COLOR, (int(x + size // 2), int(y)), size // 3)
-
-    # 공룡 그리기 (몸통)
-    pygame.draw.rect(screen, BLACK, dino)
-
-    # 공룡 귀 (좌우 삼각형 두 개, 넓게 벌어진 형태)
-    pygame.draw.polygon(screen, BLACK, [
-        (dino.x, dino.y),
-        (dino.x + 15, dino.y - 20),
-        (dino.x + 30, dino.y)
-    ])
-    pygame.draw.polygon(screen, BLACK, [
-        (dino.x + dino.width, dino.y),
-        (dino.x + dino.width - 15, dino.y - 20),
-        (dino.x + dino.width - 30, dino.y)
-    ])
-
-    # 장애물 그리기
-    for obstacle in obstacles:
-        points = [
-            (obstacle.x, obstacle.y + obstacle.height),
-            (obstacle.x + 10, obstacle.y),
-            (obstacle.x + obstacle.width - 10, obstacle.y),
-            (obstacle.x + obstacle.width, obstacle.y + obstacle.height)
-        ]
-        pygame.draw.polygon(screen, BROWN, points)
-
-    # 점수 표시
-    score_text = font.render(f"Score: {score}", True, BLACK)
-    screen.blit(score_text, (10, 10))
-
-    # 게임 오버 화면 표시
-    if is_game_over:
-        game_over_text = large_font.render("Game Over", True, BLACK)
-        restart_text = font.render("Press R to Restart", True, BLACK)
-        screen.blit(game_over_text, (WIDTH // 2 - 150, HEIGHT // 2 - 50))
-        screen.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 20))
-
+def game_over_screen(screen, font, score, inverted=False):
+    bg_color = BLACK if inverted else WHITE
+    fg_color = WHITE if inverted else BLACK
+    screen.fill(bg_color)
+    msg1 = font.render("GAME OVER", True, fg_color)
+    msg2 = font.render(f"Score: {score}", True, fg_color)
+    msg3 = font.render("Press SPACE to Restart or ESC to Quit", True, fg_color)
+    screen.blit(msg1, (WIDTH//2 - msg1.get_width()//2, HEIGHT//2 - 70))
+    screen.blit(msg2, (WIDTH//2 - msg2.get_width()//2, HEIGHT//2 - 30))
+    screen.blit(msg3, (WIDTH//2 - msg3.get_width()//2, HEIGHT//2 + 20))
     pygame.display.flip()
-    clock.tick(60)
+
+def main():
+    font = pygame.font.SysFont(None, 36)
+    running = True
+
+    while running:
+        dino = Dino()
+        base_speed = 7
+        speed_increment = 0.0015  # 난이도 증가 속도 조절
+        background = Background(base_speed)
+        obstacles = []
+        score = 0
+        game_over = False
+
+        # 장애물 생성 간격 랜덤 타이머 초기화
+        obstacle_timer = 0
+        obstacle_interval = random.randint(60, 150)  # 1초 ~ 2.5초 사이 프레임 간격
+
+        while not game_over:
+            CLOCK.tick(60)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        dino.jump()
+
+            # 속도 점진적 증가
+            current_speed = base_speed + speed_increment * score
+            if current_speed > 20:
+                current_speed = 20  # 최고 속도 제한
+
+            background.speed = current_speed
+
+            # 반전 모드 (점수 6000 이상)
+            inverted = score >= 6000
+
+            background.update()
+            background.draw(SCREEN, inverted)
+
+            dino.update()
+            dino.draw(SCREEN, inverted)
+
+            obstacle_timer += 1
+            if obstacle_timer > obstacle_interval:
+                if not obstacles:
+                    obstacles.append(Obstacle(current_speed))
+                    obstacle_timer = 0
+                    obstacle_interval = random.randint(60, 150)
+
+            for obstacle in list(obstacles):
+                obstacle.speed = current_speed
+                obstacle.update()
+                obstacle.draw(SCREEN, inverted)
+                if obstacle.rect.right < 0:
+                    obstacles.remove(obstacle)
+                if dino.rect.colliderect(obstacle.rect):
+                    game_over = True
+
+            # 해 or 달 그리기
+            if inverted:
+                draw_moon(SCREEN)
+            else:
+                draw_sun(SCREEN, inverted)
+
+            score += 1
+            score_text_color = WHITE if inverted else BLACK
+            score_text = font.render(f'Score: {score}', True, score_text_color)
+            SCREEN.blit(score_text, (10, 10))
+
+            pygame.display.flip()
+
+        game_over_screen(SCREEN, font, score, inverted)
+        waiting = True
+        while waiting:
+            CLOCK.tick(30)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                    running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        waiting = False
+                    elif event.key == pygame.K_ESCAPE:
+                        waiting = False
+                        running = False
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
