@@ -10,6 +10,29 @@
 import pygame
 import sys
 
+class World:
+    def __init__(self, tilemap, tile_images, tile_size):
+        self.tilemap = tilemap
+        self.tile_images = tile_images
+        self.tile_size = tile_size
+
+    def draw(self, surface):
+        for y, row in enumerate(self.tilemap):
+            for x, tile in enumerate(row):
+                if tile == 0:
+                    continue
+                surface.blit(self.tile_images[tile], (x * self.tile_size, y * self.tile_size))
+    
+    def check_tile_collision(self, rect, dx=0, dy=0):
+        for y, row in enumerate(self.tilemap):
+            for x, tile in enumerate(row):
+                if tile == 0:
+                    continue
+                tile_rect = pygame.Rect(x * self.tile_size, y * self.tile_size, self.tile_size, self.tile_size)
+                if rect.move(dx, dy).colliderect(tile_rect):
+                    return tile_rect
+        return None
+
 # 초기화
 pygame.init()
 screen = pygame.display.set_mode((1440, 960))
@@ -17,19 +40,21 @@ clock = pygame.time.Clock()
 
 TILE_SIZE = 32
 
-x, y = 100, 500
+x, y = 32, 926
 width, height = 10, 10
 speed = 5
 
 y_vel = 0 # y축 속도
-gravity = 0.8 # 값이 클수록 빨리 낙하
-jump_power = -14 # 값이 작을수록 높이 점프
+gravity = 1.5 # 값이 클수록 빨리 낙하
+jump_power = -17 # 값이 작을수록 높이 점프
 jump_release_damping = 0.5 # 스페이스바를 조금만 누르면 약하게 점프함
 jump_count = 0 # 점프 횟수 체크
 max_jumps = 2
 
-ground_level = 500 # 바닥 y좌표 (나중에 오브젝트랑 충돌하는 거로 변경)
+ground_level = 926 # 바닥 y좌표 (나중에 오브젝트랑 충돌하는 거로 변경)
 is_jumping = False
+
+player = pygame.Rect(x, y, 20, 20)
 
 # 맵 리스트 (배경 이미지 또는 타일로 구성)
 #maps = ["map1.png", "map2.png", "map3.png"]  # 실제 경로는 실제 이미지 파일로 설정
@@ -41,9 +66,9 @@ background = pygame.transform.scale(background, (1440, 960))  # 화면 크기에
 
 # 타일 이미지 불러오기
 tile_images = {
-    0: pygame.image.load("C:\\Program Files\\Microsoft VS Code\\ground_image_gpt.png"),
-    1: pygame.image.load("C:\\Program Files\\Microsoft VS Code\\ground_inner_image_gpt.png"),
-    #2: pygame.image.load("tiles/stone.png"),
+    1: pygame.image.load("C:\\Program Files\\Microsoft VS Code\\ground_image_gpt.png"),
+    2: pygame.image.load("C:\\Program Files\\Microsoft VS Code\\ground_inner_image_gpt.png"),
+    #3: pygame.image.load("tiles/stone.png"),
 }
 
 # 간단한 타일 맵
@@ -64,6 +89,7 @@ tilemap = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -72,19 +98,23 @@ tilemap = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 ]
 
-def draw_map():
-    for y, row in enumerate(tilemap):
-        for x, tile in enumerate(row):
-            screen.blit(tile_images[tile], (x * TILE_SIZE, y * TILE_SIZE))
+#def draw_map():
+    #for y, row in enumerate(tilemap):
+        #for x, tile in enumerate(row):
+            #if tile==0:
+                #continue
+            #screen.blit(tile_images[tile], (x * TILE_SIZE, y * TILE_SIZE))
+
+
 # 메인 루프
+world = World(tilemap, tile_images, TILE_SIZE)
 running = True
 while running:
     for event in pygame.event.get():
@@ -103,25 +133,45 @@ while running:
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        x -= speed
+        player.x -= speed
+    if world.check_tile_collision(player, 0, 0):
+        player.x += speed  # 충돌했으면 되돌림
+
     if keys[pygame.K_RIGHT]:
-        x += speed
+        player.x += speed
+        if world.check_tile_collision(player, 0, 0):
+            player.x -= speed  # 충돌했으면 되돌림
 
+    # 중력 적용
     y_vel += gravity
-    y += y_vel
+    player.y += y_vel
 
-    if y >= ground_level: # 바닥 충돌 처리
-        y = ground_level
+    collision = world.check_tile_collision(player, 0, 0)
+    if collision:
+        if y_vel > 0:
+            player.bottom = (player.bottom // TILE_SIZE) * TILE_SIZE
+            y_vel = 0
+            jump_count = 0
+        elif y_vel < 0:
+            player.top = (player.top // TILE_SIZE + 1) * TILE_SIZE
+            y_vel = 0
+
+    # ground_level 기반 바닥 충돌 (fallback)
+    if player.bottom >= ground_level:
+        player.bottom = ground_level
         y_vel = 0
-        jump_count = 0 # 바닥에 닿으면 점프 횟수 초기화
+        jump_count = 0
+
     
     screen.blit(background, (0, 0))  # 배경 이미지 그리기
-    pygame.draw.rect(screen, (0, 255, 0), (x, y, 20, 20))
+    pygame.draw.rect(screen, (0, 255, 0), player)
 
-    draw_map()
+    #draw_map()
+    world.draw(screen)
 
     pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
 sys.exit()
+
