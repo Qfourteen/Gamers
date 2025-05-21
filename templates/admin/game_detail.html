@@ -1,0 +1,472 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}{{ game.name }} 관리 - Gamers 관리자{% endblock %}
+{% block page_title %}{{ game.name }} 관리{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">게임 정보</h5>
+                <div>
+                    <button class="btn btn-outline-secondary edit-game" 
+                        data-game-id="{{ game.id }}"
+                        data-game-name="{{ game.name }}"
+                        data-game-short-description="{{ game.short_description }}"
+                        data-game-description="{{ game.description }}"
+                        data-game-tags="{{ game.tags|join(',') }}"
+                        data-game-url="{{ game.url }}"
+                        data-bs-toggle="modal" data-bs-target="#editGameModal">
+                        <i class="fas fa-edit"></i> 게임 정보 수정
+                    </button>
+                    <a href="/admin/games" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> 게임 목록으로
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h3>{{ game.name }}</h3>
+                        <p><strong>짧은 설명:</strong> {{ game.short_description }}</p>
+                        <p><strong>상세 설명:</strong><br>{{ game.description|linebreaks }}</p>
+                        <p><strong>URL:</strong> <a href="{{ game.url }}" target="_blank">{{ game.url }}</a></p>
+                        <p><strong>태그:</strong>
+                            {% for tag in game.tags %}
+                            <span class="badge bg-info">{{ tag }}</span>
+                            {% endfor %}
+                        </p>
+                        <p><strong>생성일:</strong> {{ game.created_at }}</p>
+                        <p><strong>마지막 수정일:</strong> {{ game.updated_at }}</p>
+                        <p><strong>생성자:</strong> {{ game.created_by }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">카드 관리</h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCardModal">
+                    <i class="fas fa-plus"></i> 새 카드 추가
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for card in cards %}
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="card h-100">
+                            <img src="data:image/png;base64,{{ card.image_base64 }}" class="card-img-top" alt="{{ card.card_title }}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ card.card_title }}</h5>
+                                <p class="card-text">{{ card.card_body }}</p>
+                            </div>
+                            <div class="card-footer">
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-sm btn-outline-secondary edit-card" 
+                                        data-card-id="{{ card.id }}"
+                                        data-card-title="{{ card.card_title }}"
+                                        data-card-body="{{ card.card_body }}"
+                                        data-card-image="{{ card.image_base64 }}"
+                                        data-bs-toggle="modal" data-bs-target="#editCardModal">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-card" 
+                                        data-card-id="{{ card.id }}"
+                                        data-card-title="{{ card.card_title }}"
+                                        data-bs-toggle="modal" data-bs-target="#deleteCardModal">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <p class="text-center">이 게임에 등록된 카드가 없습니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Game Modal -->
+<div class="modal fade" id="editGameModal" tabindex="-1" aria-labelledby="editGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editGameModalLabel">게임 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editGameForm">
+                    <input type="hidden" id="editGameId" name="game_id" value="{{ game.id }}">
+                    <div class="mb-3">
+                        <label for="editGameName" class="form-label">게임 이름</label>
+                        <input type="text" class="form-control" id="editGameName" name="name" required minlength="3" maxlength="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameShortDescription" class="form-label">짧은 설명</label>
+                        <input type="text" class="form-control" id="editGameShortDescription" name="short_description" maxlength="200">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameDescription" class="form-label">상세 설명</label>
+                        <textarea class="form-control" id="editGameDescription" name="description" rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameTags" class="form-label">태그 (쉼표로 구분)</label>
+                        <input type="text" class="form-control" id="editGameTags" name="tags">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameUrl" class="form-label">URL</label>
+                        <input type="url" class="form-control" id="editGameUrl" name="url" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="submitEditGame">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Card Modal -->
+<div class="modal fade" id="createCardModal" tabindex="-1" aria-labelledby="createCardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCardModalLabel">새 카드 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCardForm">
+                    <input type="hidden" id="createCardGameId" name="game_id" value="{{ game.id }}">
+                    <div class="mb-3">
+                        <label for="createCardTitle" class="form-label">카드 제목</label>
+                        <input type="text" class="form-control" id="createCardTitle" name="card_title" required minlength="3" maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="createCardBody" class="form-label">카드 내용</label>
+                        <textarea class="form-control" id="createCardBody" name="card_body" maxlength="200" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createCardImage" class="form-label">이미지</label>
+                        <input type="file" class="form-control" id="createCardImage" name="image" accept="image/*" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">이미지 미리보기</label>
+                        <div id="createCardImagePreview" class="mt-2 border rounded p-2 text-center">
+                            <p class="text-muted">이미지를 선택해주세요</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="submitCreateCard">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Card Modal -->
+<div class="modal fade" id="editCardModal" tabindex="-1" aria-labelledby="editCardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCardModalLabel">카드 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCardForm">
+                    <input type="hidden" id="editCardId" name="card_id">
+                    <div class="mb-3">
+                        <label for="editCardTitle" class="form-label">카드 제목</label>
+                        <input type="text" class="form-control" id="editCardTitle" name="card_title" required minlength="3" maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCardBody" class="form-label">카드 내용</label>
+                        <textarea class="form-control" id="editCardBody" name="card_body" maxlength="200" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCardImage" class="form-label">이미지 (변경하려면 선택)</label>
+                        <input type="file" class="form-control" id="editCardImage" name="image" accept="image/*">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">현재 이미지</label>
+                        <div id="editCardImagePreview" class="mt-2 border rounded p-2 text-center">
+                            <img id="editCardCurrentImage" src="" class="img-fluid" alt="카드 이미지">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="submitEditCard">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Card Modal -->
+<div class="modal fade" id="deleteCardModal" tabindex="-1" aria-labelledby="deleteCardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteCardModalLabel">카드 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>정말 <strong id="deleteCardTitle"></strong> 카드를 삭제하시겠습니까?</p>
+                <p class="text-danger">이 작업은 되돌릴 수 없습니다.</p>
+                <form id="deleteCardForm">
+                    <input type="hidden" id="deleteCardId" name="card_id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="submitDeleteCard">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 이미지를 base64로 변환하는 유틸리티 함수
+function getBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            let base64 = reader.result;
+            // data:image/jpeg;base64, 부분 제거
+            base64 = base64.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit Game - Populate Modal
+    document.querySelectorAll('.edit-game').forEach(button => {
+        button.addEventListener('click', function() {
+            const gameId = this.getAttribute('data-game-id');
+            const gameName = this.getAttribute('data-game-name');
+            const gameShortDescription = this.getAttribute('data-game-short-description');
+            const gameDescription = this.getAttribute('data-game-description');
+            const gameTags = this.getAttribute('data-game-tags');
+            const gameUrl = this.getAttribute('data-game-url');
+
+            document.getElementById('editGameId').value = gameId;
+            document.getElementById('editGameName').value = gameName;
+            document.getElementById('editGameShortDescription').value = gameShortDescription;
+            document.getElementById('editGameDescription').value = gameDescription;
+            document.getElementById('editGameTags').value = gameTags;
+            document.getElementById('editGameUrl').value = gameUrl;
+        });
+    });
+
+    // Edit Game - Submit
+    document.getElementById('submitEditGame').addEventListener('click', async function() {
+        const gameId = document.getElementById('editGameId').value;
+        const name = document.getElementById('editGameName').value;
+        const shortDescription = document.getElementById('editGameShortDescription').value;
+        const description = document.getElementById('editGameDescription').value;
+        const tags = document.getElementById('editGameTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        const url = document.getElementById('editGameUrl').value;
+
+        try {
+            const response = await fetch(`/api/admin/games/${gameId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    short_description: shortDescription,
+                    description: description,
+                    tags: tags,
+                    url: url
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+
+    // Create Card - Image Preview
+    document.getElementById('createCardImage').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'img-fluid';
+                
+                const previewDiv = document.getElementById('createCardImagePreview');
+                previewDiv.innerHTML = '';
+                previewDiv.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Create Card - Submit
+    document.getElementById('submitCreateCard').addEventListener('click', async function() {
+        const gameId = document.getElementById('createCardGameId').value;
+        const cardTitle = document.getElementById('createCardTitle').value;
+        const cardBody = document.getElementById('createCardBody').value;
+        const cardImage = document.getElementById('createCardImage').files[0];
+
+        if (!cardImage) {
+            alert('이미지를 선택해주세요.');
+            return;
+        }
+
+        try {
+            // 이미지를 base64로 변환
+            const imageBase64 = await getBase64(cardImage);
+            
+            const response = await fetch('/api/admin/games/cards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    game_id: gameId,
+                    card_title: cardTitle,
+                    card_body: cardBody,
+                    image_base64: imageBase64
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+
+    // Edit Card - Populate Modal
+    document.querySelectorAll('.edit-card').forEach(button => {
+        button.addEventListener('click', function() {
+            const cardId = this.getAttribute('data-card-id');
+            const cardTitle = this.getAttribute('data-card-title');
+            const cardBody = this.getAttribute('data-card-body');
+            const cardImage = this.getAttribute('data-card-image');
+
+            document.getElementById('editCardId').value = cardId;
+            document.getElementById('editCardTitle').value = cardTitle;
+            document.getElementById('editCardBody').value = cardBody;
+            document.getElementById('editCardCurrentImage').src = `data:image/png;base64,${cardImage}`;
+        });
+    });
+
+    // Edit Card - Image Preview
+    document.getElementById('editCardImage').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('editCardCurrentImage').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Edit Card - Submit
+    document.getElementById('submitEditCard').addEventListener('click', async function() {
+        const cardId = document.getElementById('editCardId').value;
+        const cardTitle = document.getElementById('editCardTitle').value;
+        const cardBody = document.getElementById('editCardBody').value;
+        const cardImage = document.getElementById('editCardImage').files[0];
+
+        try {
+            const updateData = {
+                card_title: cardTitle,
+                card_body: cardBody
+            };
+
+            // 이미지가 변경된 경우에만 base64로 변환하여 포함
+            if (cardImage) {
+                updateData.image_base64 = await getBase64(cardImage);
+            }
+            
+            const response = await fetch(`/api/admin/games/cards/${cardId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+
+    // Delete Card - Populate Modal
+    document.querySelectorAll('.delete-card').forEach(button => {
+        button.addEventListener('click', function() {
+            const cardId = this.getAttribute('data-card-id');
+            const cardTitle = this.getAttribute('data-card-title');
+
+            document.getElementById('deleteCardId').value = cardId;
+            document.getElementById('deleteCardTitle').textContent = cardTitle;
+        });
+    });
+
+    // Delete Card - Submit
+    document.getElementById('submitDeleteCard').addEventListener('click', async function() {
+        const cardId = document.getElementById('deleteCardId').value;
+
+        try {
+            const response = await fetch(`/api/admin/games/cards/${cardId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+});
+</script>
+{% endblock %}
