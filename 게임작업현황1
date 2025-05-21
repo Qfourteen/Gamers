@@ -1,1 +1,217 @@
-code ex
+import pygame
+import sys
+import random
+import time
+
+# 초기화
+pygame.init()
+
+# 화면 설정
+WIDTH, HEIGHT = 600, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("서바이벌 발판 게임")
+clock = pygame.time.Clock()
+
+# 색상
+WHITE = (255, 255, 255)
+GRAY = (180, 180, 180)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 200, 0)
+
+# 글꼴
+font = pygame.font.SysFont(None, 32)
+
+# 발판 위치
+tile_positions = [
+    (250, 100), (310, 100),
+    (210, 160), (270, 160), (330, 160),
+    (250, 220), (310, 220)
+]
+
+TILE_SIZE = 50
+rankings = []
+
+# 이미지 로드
+def load_image(path, size=(50, 50)):
+    img = pygame.image.load(path).convert_alpha()
+    return pygame.transform.scale(img, size)
+
+tile_image = load_image("dot_tile.png")
+sprites = {
+    "standing": load_image("man_standing.png", (48, 48)),
+    "jumping": load_image("man_jumping.png", (48, 48)),
+    "surprised": load_image("man_surprised.png", (48, 48)),
+    "falling": load_image("man_falling.png", (48, 48)),
+    "flying_1": load_image("man_flying_1.png", (48, 48)),
+    "flying_2": load_image("man_flying_2.png", (48, 48)),
+    "raising": load_image("man_rasing_arm.png", (48, 48))
+}
+
+# 텍스트 출력
+def draw_text(text, x, y, color=BLACK):
+    img = font.render(text, True, color)
+    screen.blit(img, (x, y))
+
+# 발판 그리기
+def draw_tiles(tiles, removed, highlight=None, animate_highlight=False, anim_progress=0):
+    for i, rect in enumerate(tiles):
+        if i in removed:
+            continue
+        if i == highlight and animate_highlight:
+            shake_offset = 2 * ((anim_progress % 4) - 2)
+            screen.blit(tile_image, (rect.x + shake_offset, rect.y))
+        else:
+            screen.blit(tile_image, rect)
+        pygame.draw.rect(screen, GREEN if i == highlight else BLACK, rect, 2)
+
+# 게임 오버 화면
+def game_over(score):
+    global rankings
+    rankings.append(score)
+    rankings = sorted(rankings, reverse=True)[:5]
+    screen.fill(WHITE)
+    draw_text("Game Over!", 220, 150, RED)
+    draw_text(f"Score: {score}", 230, 180)
+    draw_text("Top 5:", 250, 220)
+    for idx, s in enumerate(rankings):
+        draw_text(f"{idx+1}. {s}", 260, 250 + idx * 25)
+    pygame.display.flip()
+    pygame.time.wait(3000)
+
+# 메인 게임 루프
+def main():
+    tiles = [pygame.Rect(*pos, TILE_SIZE, TILE_SIZE) for pos in tile_positions]
+    character_pos = tiles[3].center
+    current_sprite = "standing"
+    score = 0
+    rocket_used = False
+    alive = True
+    flying = False
+
+    while alive:
+        removed_tiles = []
+
+        # 초기 화면
+        screen.fill(WHITE)
+        draw_tiles(tiles, removed_tiles)
+        screen.blit(sprites[current_sprite], (character_pos[0] - 24, character_pos[1] - 48))
+        draw_text(f"Score: {score}", 10, 10)
+        draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+        pygame.display.flip()
+
+        clicked_index = None
+        waiting_click = True
+        flying_timer = 0
+
+        # 입력 대기
+        while waiting_click:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE and not rocket_used:
+                        rocket_used = True
+                        flying = True
+                        flying_timer = time.time()
+
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = event.pos
+                    for i, rect in enumerate(tiles):
+                        if rect.collidepoint(pos):
+                            clicked_index = i
+                            waiting_click = False
+                            break
+
+            if flying:
+                current_sprite = "flying_1" if int((time.time() - flying_timer) * 2) % 2 == 0 else "flying_2"
+
+            screen.fill(WHITE)
+            draw_tiles(tiles, removed_tiles)
+            screen.blit(sprites[current_sprite], (character_pos[0] - 24, character_pos[1] - 48))
+            draw_text(f"Score: {score}", 10, 10)
+            draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+            pygame.display.flip()
+            clock.tick(30)
+
+        if clicked_index is None:
+            continue
+
+        if not flying:
+            if character_pos == tiles[clicked_index].center:
+                current_sprite = "surprised"
+            else:
+                current_sprite = "jumping"
+                for i in range(10):
+                    lerp_x = character_pos[0] + (tiles[clicked_index].centerx - character_pos[0]) * (i + 1) / 10
+                    lerp_y = character_pos[1] + (tiles[clicked_index].centery - character_pos[1]) * (i + 1) / 10
+                    screen.fill(WHITE)
+                    draw_tiles(tiles, removed_tiles)
+                    screen.blit(sprites["jumping"], (lerp_x - 24, lerp_y - 48))
+                    draw_text(f"Score: {score}", 10, 10)
+                    draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+                    pygame.display.flip()
+                    clock.tick(30)
+                character_pos = tiles[clicked_index].center
+                current_sprite = "surprised"
+
+        # 흔들림 애니메이션 (로켓 아닐 경우 스프라이트도 흔들림)
+        for i in range(45):
+            screen.fill(WHITE)
+            draw_tiles(tiles, removed_tiles, highlight=clicked_index, animate_highlight=True, anim_progress=i)
+            sprite_key = (
+                "flying_1" if flying and int(time.time() * 2) % 2 == 0 else
+                "flying_2" if flying else "surprised"
+            )
+            offset_x = ((i % 4) - 2) if not flying else 0
+            screen.blit(sprites[sprite_key], (character_pos[0] - 24 + offset_x, character_pos[1] - 48))
+            draw_text(f"Score: {score}", 10, 10)
+            draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+            pygame.display.flip()
+            clock.tick(30)
+
+        # 발판 제거
+        all_indexes = list(range(len(tiles)))
+        remove_count = 3 if random.random() < 0.85 else 4
+        removed_this_turn = random.sample(all_indexes, remove_count)
+
+        # 생존 판정
+        if clicked_index in removed_this_turn and not flying:
+            current_sprite = "falling"
+            for i in range(30):
+                screen.fill(WHITE)
+                draw_tiles(tiles, removed_this_turn)
+                screen.blit(sprites["falling"], (character_pos[0] - 24, character_pos[1] - 48 + i * 2))
+                draw_text(f"Score: {score}", 10, 10)
+                pygame.display.flip()
+                clock.tick(30)
+            pygame.time.wait(1000)
+            alive = False
+            break
+        else:
+            current_sprite = "raising"
+            for i in range(30):
+                screen.fill(WHITE)
+                draw_tiles(tiles, removed_this_turn)
+                sprite_key = (
+                    "flying_1" if flying and int(time.time() * 2) % 2 == 0 else
+                    "flying_2" if flying else "raising"
+                )
+                screen.blit(sprites[sprite_key], (character_pos[0] - 24, character_pos[1] - 48))
+                draw_text(f"Score: {score}", 10, 10)
+                draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+                pygame.display.flip()
+                clock.tick(30)
+
+        pygame.time.wait(500)
+        current_sprite = "standing"
+        flying = False
+        score += 1
+
+    game_over(score)
+
+# 프로그램 실행
+while True:
+    main()
