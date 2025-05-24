@@ -64,6 +64,23 @@ class Card(Document):
         name = "cards"
 ```
 
+### Score
+```python
+from beanie import Document, Link
+from pydantic import Field
+from typing import Optional
+
+class Score(Document):
+    game_id: Link[Game]
+    user_id: Link[User]
+    username: str
+    score: int = Field(ge=0)
+    created_at: Optional[str] = None
+    
+    class Settings:
+        name = "scores"
+```
+
 ## 애플리케이션 레벨(Backend↔Frontend)
 
 > `schemas`라고도 불립니다.
