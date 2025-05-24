@@ -10,7 +10,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.backend.schemas.game_list import SearchResult, CardResult
 from src.backend.schemas.main import PasswordRequest
-from src.backend.models.game import Game, Card
+from src.backend.models.game import Game, Card, Score
 from src.backend.models.user import User
 
 from src.backend.authentication.basic import basic_router
@@ -26,7 +26,7 @@ from src.backend.generate_dummy import get_data_card, get_data_search
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     client = AsyncIOMotorClient(MONGODB_URL)
-    await init_beanie(client.gamers, document_models=[Game, Card, User])
+    await init_beanie(client.gamers, document_models=[Game, Card, User, Score])
     yield
     client.close()
 

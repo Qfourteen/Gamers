@@ -5,7 +5,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import os
 
-from src.backend.models.game import Game, Card
+from src.backend.models.game import Game, Card, Score
 from src.backend.schemas.game_list import (
     GameCreate, GameUpdate, GameResponse,
     CardCreate, CardUpdate, CardResponse
@@ -179,10 +179,13 @@ async def delete_game(
     # 게임 관련 카드 삭제
     await Card.find(Card.game_id == game.id).delete()
     
+    # 게임 관련 점수 삭제
+    await Score.find(Score.game_id == game.id).delete()
+    
     # 게임 삭제
     await game.delete()
     
-    return {"message": "Game and its cards deleted successfully"}
+    return {"message": "Game, its cards, and scores deleted successfully"}
 
 # Card CRUD API Endpoints
 @api_game_router.post("/cards", response_model=CardResponse)

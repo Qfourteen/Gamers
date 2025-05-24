@@ -60,3 +60,14 @@ class CardResponse(BaseModel):
     updated_at: Optional[str] = None
     created_by: Optional[str] = None
 
+class ScoreCreate(BaseModel):
+    game_url: str
+    score: int = Field(ge=0)
+
+class ScoreResponse(BaseModel):
+    id: str
+    game_id: str
+    username: str
+    score: int
+    created_at: Optional[str] = None
+
