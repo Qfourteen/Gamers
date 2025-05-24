@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional, List
 from datetime import datetime, timezone
+from bson import ObjectId
 import os
 
 from src.backend.models.game import Game, Card, Score
@@ -177,10 +178,10 @@ async def delete_game(
         )
     
     # 게임 관련 카드 삭제
-    await Card.find(Card.game_id == game.id).delete()
+    await Card.find({"game_id.$id": ObjectId(game.id)}).delete_many()
     
     # 게임 관련 점수 삭제
-    await Score.find(Score.game_id == game.id).delete()
+    await Score.find({"game_id.$id": ObjectId(game.id)}).delete_many()
     
     # 게임 삭제
     await game.delete()
@@ -253,7 +254,7 @@ async def list_cards_by_game(
         )
     
     # 해당 게임의 카드 조회
-    cards = await Card.find(Card.game_id == game.id).sort(-Card.created_at).skip(skip).limit(limit).to_list()
+    cards = await Card.find({"game_id.$id": ObjectId(game.id)}).sort(-Card.created_at).skip(skip).limit(limit).to_list()
     
     return [
         CardResponse(
@@ -369,7 +370,7 @@ async def admin_game_detail_page(
     if not game:
         return RedirectResponse(url="/admin/games", status_code=303)
     
-    cards = await Card.find(Card.game_id == game.id).sort(-Card.created_at).to_list()
+    cards = await Card.find({"game_id.$id": ObjectId(game.id)}).sort(-Card.created_at).to_list()
     
     return templates.TemplateResponse(
         "admin/game_detail.html",
