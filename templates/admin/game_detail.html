@@ -30,7 +30,7 @@
                     <div class="col-md-8">
                         <h3>{{ game.name }}</h3>
                         <p><strong>짧은 설명:</strong> {{ game.short_description }}</p>
-                        <p><strong>상세 설명:</strong><br>{{ game.description|linebreaks }}</p>
+                        <p><strong>상세 설명:</strong><br>{{ game.description }}</p>
                         <p><strong>URL:</strong> <a href="{{ game.url }}" target="_blank">{{ game.url }}</a></p>
                         <p><strong>태그:</strong>
                             {% for tag in game.tags %}
