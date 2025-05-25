@@ -2,8 +2,10 @@ from fastapi import APIRouter, Request, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
+from bson import ObjectId
 
 from src.backend.models.user import User
+from src.backend.models.game import Score
 from src.backend.utility.nickname_utils import is_valid_nickname
 from src.backend.utility.password_utils import is_valid_password
 from src.backend.env import SECURE_COOKIE
@@ -186,6 +188,9 @@ async def deactivate_account(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Account is already disabled"
         )
+
+    # 점수 삭제: 현재 사용자와 연결된 Score 문서 모두 제거
+    await Score.find({"user_id.$id": ObjectId(current_user.id)}).delete_many()
 
     # 계정 비활성화
     current_user.disabled = True

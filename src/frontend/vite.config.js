@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   root: '.', // frontend 디렉토리가 root
   build: {
-    outDir: '../backend/static', // 빌드 결과물이 백엔드 static 폴더로
+    outDir: '../backend/static/react', // 빌드 결과물이 백엔드 static 폴더로
     emptyOutDir: true,
     rollupOptions: {
       input: {
