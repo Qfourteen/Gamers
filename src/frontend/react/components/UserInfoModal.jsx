@@ -74,7 +74,9 @@ function UserInfoModal({ show, onHide, userInfo }) {
                   계정 삭제
                 </Button>
                 <p className="text-muted mt-2 small">
-                  계정을 다시 복구하려면, 관리자에 의해 수동으로 복구하는 수밖에 없습니다.
+                  모든 점수 정보가 사라집니다.
+                  <br/>
+                  계정 자체는 다시 복구할 수 있습니다. 다만 관리자에 의해 수동으로 복구해야 합니다.
                 </p>
               </div>
             )}

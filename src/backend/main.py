@@ -10,11 +10,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from src.backend.schemas.game_list import SearchResult, CardResult
 from src.backend.schemas.main import PasswordRequest
-from src.backend.models.game import Game, Card
+from src.backend.models.game import Game, Card, Score
 from src.backend.models.user import User
 
 from src.backend.authentication.basic import basic_router
 from src.backend.authentication.admin import admin_router, api_router
+from src.backend.authentication.game_admin import admin_game_router, api_game_router
+from src.backend.game import game_router
 from src.backend.utility.nickname_utils import is_valid_nickname, get_nickname_validation_rules
 from src.backend.utility.password_utils import is_valid_password, get_password_strength, get_password_validation_rules
 
@@ -24,7 +26,7 @@ from src.backend.generate_dummy import get_data_card, get_data_search
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     client = AsyncIOMotorClient(MONGODB_URL)
-    await init_beanie(client.gamers, document_models=[Game, Card, User])
+    await init_beanie(client.gamers, document_models=[Game, Card, User, Score])
     yield
     client.close()
 
@@ -36,6 +38,9 @@ app.include_router(basic_router, prefix="/auth", tags=["authentication"])
 # 관리자 라우터 추가
 app.include_router(admin_router, tags=["admin"])
 app.include_router(api_router, tags=["admin-api"])
+app.include_router(admin_game_router, tags=["admin-games"])
+app.include_router(api_game_router, tags=["admin-games-api"])
+app.include_router(game_router, prefix="/games", tags=["game-list"])
 
 # 정적 파일 서빙: 프론트엔드 빌드 결과물을 사용
 app.mount("/static", StaticFiles(directory="./static"), name="static")
@@ -44,7 +49,7 @@ templates = Jinja2Templates(directory="./templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return FileResponse("./static/index.html")
+    return FileResponse("./static/react/index.html")
 
 @app.get("/introduce", response_class=HTMLResponse)
 async def introduce(request: Request):
