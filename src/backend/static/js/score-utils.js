@@ -68,7 +68,7 @@ class ScoreManager {
      * @param {string} tableBodyId - ID of the table body element
      * @param {number} limit - Number of scores to display
      */
-    async displayHighScores(tableBodyId, limit = 10) {
+    async displayHighScores(tableBodyId, limit = 5) {
         try {
             const scores = await this.getHighScores(limit);
             const tableBody = document.getElementById(tableBodyId);
