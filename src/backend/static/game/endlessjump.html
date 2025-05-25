@@ -14,6 +14,8 @@
     <!-- utilities -->
     <script src="/static/js/score-utils.js"></script>
     <script src="/static/js/toast.js" defer></script>
+    <script src="/static/js/loader.js" defer></script>
+    <link href="/static/css/loader.css" rel="stylesheet">
     <style>
         /* 아래 두 선택자는 게임별로 달라질 수 있음 */
         #game-container {
@@ -60,8 +62,13 @@
     </style>
 </head>
 <body>
+    <div id="loading-screen">
+        <div class="spinner-border text-info" role="status" style="width: 8rem; height: 8rem;"></div>
+        <h1>로딩 중: 잠시만 기다리세요.</h1>
+        <p class="mt-4 fs-5 text-muted" id="loader-message">팁: 게임이 진행이 안 되는 상황인가요? 브라우저 새로고침을 해보세요.</p>
+    </div>
     <div class="toast-container position-fixed top-0 start-0 p-3">
-      <div id="liveToast" class="toast text-bg-dark" role="alert" aria-live="assertive" aria-atomic="true">
+      <div id="liveToast" class="toast bg-success-subtle" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header fs-4">
           <strong class="me-auto">알림</strong>
           <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
