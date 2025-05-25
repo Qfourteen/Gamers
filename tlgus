@@ -5,7 +5,7 @@ import math
 pygame.init()
 WIDTH, HEIGHT = 800, 400
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Dino Game with Smooth Day/Night")
+pygame.display.set_caption("Dino Boo Game")
 CLOCK = pygame.time.Clock()
 
 WHITE = (255, 255, 255)
@@ -336,10 +336,22 @@ def game_over_screen(screen, font, score, high_score, background_surface=None, i
     game_over_text = big_font.render("GAME OVER", True, fg_color)
     screen.blit(game_over_text, (center_x - game_over_text.get_width() // 2, y_start))
 
-    score_text = font.render(f"Score: {score}", True, fg_color)
-    high_score_text = font.render(f"High Score: {high_score}", True, fg_color)
-    screen.blit(score_text, (center_x - score_text.get_width() // 2, y_start + 80))
-    screen.blit(high_score_text, (center_x - high_score_text.get_width() // 2, y_start + 120))
+    score_label = font.render("Score:", True, fg_color)
+    score_value = pygame.font.SysFont(None, 30).render(f"{score:07d}", True, fg_color)
+
+    high_score_label = font.render("High Score:", True, fg_color)
+    high_score_value = pygame.font.SysFont(None, 30).render(f"{high_score:07d}", True, fg_color)
+
+    # 정렬
+    score_group_width = score_label.get_width() + 10 + score_value.get_width()
+    score_group_x = center_x - score_group_width // 2
+    screen.blit(score_label, (score_group_x, y_start + 80))
+    screen.blit(score_value, (score_group_x + score_label.get_width() + 10, y_start + 80))
+
+    high_score_group_width = high_score_label.get_width() + 10 + high_score_value.get_width()
+    high_score_group_x = center_x - high_score_group_width // 2
+    screen.blit(high_score_label, (high_score_group_x, y_start + 120))
+    screen.blit(high_score_value, (high_score_group_x + high_score_label.get_width() + 10, y_start + 120))
 
     restart_color = fg_color
     quit_color = fg_color
@@ -457,8 +469,15 @@ def main():
             draw_moon(SCREEN, moon_alpha)
 
             score_text_color = lerp_color(BLACK, WHITE, blend)
-            score_text = font.render(f'Score: {score}', True, score_text_color)
+
+            # 점수를 7자리로 0으로 채워서 출력
+            score_str = f"Score: {score:07d}"
+
+            # 폰트 크기를 더 작게 설정 (예: 28)
+            small_font = pygame.font.SysFont(None, 28)
+            score_text = small_font.render(score_str, True, score_text_color)
             SCREEN.blit(score_text, (10, 10))
+
 
             pygame.display.flip()
             score += 1
@@ -516,4 +535,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
