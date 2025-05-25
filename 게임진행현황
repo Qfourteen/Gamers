@@ -1,0 +1,385 @@
+import pygame
+import sys
+import random
+import time
+
+pygame.init()
+pygame.mixer.init()
+
+
+
+# 음악 및 효과음 로드
+pygame.mixer.music.load("Intro_music.mp3")
+earthquake_sound = pygame.mixer.Sound("earthquake_sound.mp3")
+falling_sound = pygame.mixer.Sound("falling_sound.mp3")
+jump_sound = pygame.mixer.Sound("Jumping_sound.mp3")
+rocket_sound = pygame.mixer.Sound("rocket_sound.mp3")
+
+WIDTH, HEIGHT = 600, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("No More Floor")
+clock = pygame.time.Clock()
+
+WHITE = (255, 255, 255)
+GRAY = (180, 180, 180)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 200, 0)
+
+font_main = pygame.font.Font("NanumPen.ttf", 32)
+font_intro = pygame.font.Font("NanumPen.ttf", 24)
+
+tile_positions = [
+    (250, 100), (310, 100),
+    (210, 160), (270, 160), (330, 160),
+    (250, 220), (310, 220)
+]
+
+TILE_SIZE = 50
+rankings = []
+
+def load_image(path, size=(50, 50)):
+    img = pygame.image.load(path).convert_alpha()
+    return pygame.transform.scale(img, size)
+
+intro_image = pygame.image.load("Game_Intro_Image.png").convert_alpha()
+
+def intro_animation():
+    duration = 5
+    start_time = time.time()
+    pygame.mixer.music.play(-1)
+    while True:
+        elapsed = time.time() - start_time
+        if elapsed > duration:
+            break
+        t = elapsed / duration
+        scale = 0.1 + (1.0 - 0.1) * t
+        alpha = int(255 * (t * 2) if t < 0.5 else 255 * (2 - t * 2))
+        new_size = (int(intro_image.get_width() * scale), int(intro_image.get_height() * scale))
+        image_scaled = pygame.transform.smoothscale(intro_image, new_size)
+        image_scaled.set_alpha(alpha)
+        screen.fill(BLACK)
+        screen.blit(image_scaled, image_scaled.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+        pygame.display.flip()
+        clock.tick(60)
+    pygame.mixer.music.stop()
+
+tile_image = load_image("dot_tile.png")
+background_image = load_image("background2.png", (WIDTH, HEIGHT))
+sprites = {
+    "standing": load_image("man_standing.png", (48, 48)),
+    "jumping": load_image("man_jumping.png", (48, 48)),
+    "surprised": load_image("man_surprised.png", (48, 48)),
+    "falling": load_image("man_falling.png", (48, 48)),
+    "flying_1": load_image("man_flying_1.png", (48, 48)),
+    "flying_2": load_image("man_flying_2.png", (48, 48)),
+    "raising": load_image("man_rasing_arm.png", (48, 48))
+}
+
+def draw_text(text, x, y, color=WHITE, font=font_main):
+    img = font.render(text, True, color)
+    screen.blit(img, (x, y))
+
+def draw_multiline_text(text, x, y, font, color=WHITE, max_width=500, line_spacing=5):
+    lines = []
+    for paragraph in text.split('\n'):
+        words = paragraph.split(' ')
+        current_line = ""
+        for word in words:
+            test_line = f"{current_line} {word}".strip()
+            if font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+    for i, line in enumerate(lines):
+        img = font.render(line, True, color)
+        screen.blit(img, (x, y + i * (font.get_height() + line_spacing)))
+
+def show_intro():
+    intro = True
+    button_rect = pygame.Rect(WIDTH // 2 - 50, HEIGHT - 80, 100, 40)
+    fade_surface = pygame.Surface((WIDTH, HEIGHT))
+    fade_surface.fill(BLACK)
+
+    for alpha in range(255, -1, -5):
+        screen.blit(background_image, (0, 0))
+        draw_text("No More Floor", 80, 50, font=font_main)
+        draw_text("1. 화면에 나오는 발판을 클릭하여 이동하세요!", 80, 90, font=font_intro)
+        draw_text("2. 클릭한 뒤 무작위로 발판이 사라집니다!", 80, 120, font=font_intro)
+        draw_text("3. 살아남아 최대한 높은 점수를 노려보세요!", 80, 150, font=font_intro)
+        instruction = (
+            "특수 능력: 발판을 밟기 전에 스페이스바를 누르면 로켓을 장착하게 됩니다!\n"
+            "로켓을 착용한 상태에서는 추락하지 않으니 중요한 순간 사용해 보세요!\n"
+            "(단, 로켓은 한 번 사용하면 망가지므로 신중히 사용해주세요!)"
+        )
+        draw_multiline_text(instruction, 80, 190, font_intro, WHITE, max_width=500)
+        pygame.draw.rect(screen, BLACK, button_rect)
+        ok_text = font_intro.render("OK", True, WHITE)
+        screen.blit(ok_text, ok_text.get_rect(center=button_rect.center).topleft)
+        fade_surface.set_alpha(alpha)
+        screen.blit(fade_surface, (0, 0))
+        pygame.display.flip()
+        clock.tick(30)
+
+    while intro:
+        screen.blit(background_image, (0, 0))
+        mouse_pos = pygame.mouse.get_pos()
+        draw_text("No More Floor", 80, 50, font=font_main)
+        draw_text("1. 화면에 나오는 발판을 클릭하여 이동하세요!", 80, 90, font=font_intro)
+        draw_text("2. 클릭한 뒤 무작위로 발판이 사라집니다!", 80, 120, font=font_intro)
+        draw_text("3. 살아남아 최대한 높은 점수를 노려보세요!", 80, 150, font=font_intro)
+        draw_multiline_text(instruction, 80, 190, font_intro, WHITE, max_width=500)
+        pygame.draw.rect(screen, GRAY if button_rect.collidepoint(mouse_pos) else BLACK, button_rect)
+        screen.blit(font_intro.render("OK", True, WHITE), font_intro.render("OK", True, WHITE).get_rect(center=button_rect.center).topleft)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if button_rect.collidepoint(event.pos):
+                    intro = False
+
+def draw_tiles(tiles, removed, highlight=None, animate_highlight=False, anim_progress=0, hover_index=None):
+    shake_offset = 0
+    for i, rect in enumerate(tiles):
+        if i in removed:
+            continue
+        if animate_highlight:
+            shake_offset = 2 * ((anim_progress % 4) - 2)
+            screen.blit(tile_image, (rect.x + shake_offset, rect.y))
+        else:
+            screen.blit(tile_image, rect)
+        border_color = GRAY if i == hover_index else (GREEN if i == highlight else BLACK)
+        pygame.draw.rect(screen, border_color, rect, 2)
+    return shake_offset if animate_highlight else 0
+
+crying_sprite = load_image("man_crying_1.png", (350, 350))
+
+def game_over(score):
+    global rankings
+    rankings.append(score)
+    rankings = sorted(rankings, reverse=True)[:5]
+
+    retry_rect = pygame.Rect((WIDTH // 2) - 130, HEIGHT - 80, 120, 50)
+    quit_rect = pygame.Rect((WIDTH // 2) + 10, HEIGHT - 80, 120, 50)
+    waiting = True
+    confirm_quit = False
+
+    yes_rect = pygame.Rect(WIDTH // 2 - 110, HEIGHT // 2 + 40, 80, 40)
+    no_rect = pygame.Rect(WIDTH // 2 + 30, HEIGHT // 2 + 40, 80, 40)
+
+    while waiting:
+        screen.blit(background_image, (0, 0))
+        mouse_pos = pygame.mouse.get_pos()
+        screen.blit(crying_sprite, (0, 0))
+
+        draw_text("Game Over!", 360, 50, RED, font=font_intro)
+        draw_text(f"Score: {score}", 360, 90, font=font_intro)
+        draw_text("Top 5:", 360, 130, font=font_intro)
+        for idx, s in enumerate(rankings):
+            draw_text(f"{idx+1}. {s}", 370, 160 + idx * 20, font=font_intro)
+
+        # Retry 버튼
+        pygame.draw.rect(screen, GRAY if retry_rect.collidepoint(mouse_pos) else BLACK, retry_rect)
+        screen.blit(font_intro.render("Retry?", True, WHITE), font_intro.render("Retry?", True, WHITE).get_rect(center=retry_rect.center))
+
+        # Quit 버튼
+        pygame.draw.rect(screen, RED if quit_rect.collidepoint(mouse_pos) else BLACK, quit_rect)
+        screen.blit(font_intro.render("Quit", True, WHITE), font_intro.render("Quit", True, WHITE).get_rect(center=quit_rect.center))
+
+        # Quit 확인 창
+        if confirm_quit:
+            confirm_rect = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 2 - 60, 300, 120)
+            pygame.draw.rect(screen, BLACK, confirm_rect)
+            pygame.draw.rect(screen, WHITE, confirm_rect, 2)
+            draw_text("게임을 종료하시겠습니까?", confirm_rect.x + 30, confirm_rect.y + 20, WHITE, font_intro)
+
+            # Yes / No 버튼
+            pygame.draw.rect(screen, RED if yes_rect.collidepoint(mouse_pos) else BLACK, yes_rect)
+            pygame.draw.rect(screen, GRAY if no_rect.collidepoint(mouse_pos) else BLACK, no_rect)
+            screen.blit(font_intro.render("Yes", True, WHITE), font_intro.render("Yes", True, WHITE).get_rect(center=yes_rect.center))
+            screen.blit(font_intro.render("No", True, WHITE), font_intro.render("No", True, WHITE).get_rect(center=no_rect.center))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if confirm_quit:
+                    if yes_rect.collidepoint(event.pos):
+                        pygame.quit()
+                        sys.exit()
+                    elif no_rect.collidepoint(event.pos):
+                        confirm_quit = False
+                else:
+                    if retry_rect.collidepoint(event.pos):
+                        waiting = False
+                    elif quit_rect.collidepoint(event.pos):
+                        confirm_quit = True
+
+
+def main():
+    tiles = [pygame.Rect(*pos, TILE_SIZE, TILE_SIZE) for pos in tile_positions]
+    character_pos = tiles[3].center
+    current_sprite = "standing"
+    score = 0
+    rocket_used = False
+    alive = True
+    flying = False
+    rocket_sound_played = False  # 게임 시작 시 False로 초기화
+
+    while alive:
+        removed_tiles = []
+        hover_index = None
+        mouse_pos = pygame.mouse.get_pos()
+        for i, rect in enumerate(tiles):
+            if rect.collidepoint(mouse_pos):
+                hover_index = i
+                break
+
+        screen.blit(background_image, (0, 0))
+        shake_offset = draw_tiles(tiles, removed_tiles, hover_index=hover_index)
+        character_x = character_pos[0] - 24 + (0 if flying else shake_offset)
+        screen.blit(sprites[current_sprite], (character_x, character_pos[1] - 48))
+        draw_text(f"Score: {score}", 10, 10)
+        draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+        pygame.display.flip()
+
+        clicked_index = None
+        waiting_click = True
+        flying_timer = 0
+
+        while waiting_click:
+            mouse_pos = pygame.mouse.get_pos()
+            hover_index = None
+            for i, rect in enumerate(tiles):
+                if rect.collidepoint(mouse_pos):
+                    hover_index = i
+                    break
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and not rocket_used:
+                    rocket_used = True
+                    flying = True
+                    flying_timer = time.time()
+                    if not rocket_sound_played:
+                        rocket_sound.play()
+                        rocket_sound_played = True
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = event.pos
+                    for i, rect in enumerate(tiles):
+                        if rect.collidepoint(pos):
+                            clicked_index = i
+                            waiting_click = False
+                            break
+
+            if flying:
+                current_sprite = "flying_1" if int((time.time() - flying_timer) * 2) % 2 == 0 else "flying_2"
+
+            screen.blit(background_image, (0, 0))
+            shake_offset = draw_tiles(tiles, removed_tiles, hover_index=hover_index)
+            character_x = character_pos[0] - 24 + (0 if flying else shake_offset)
+            screen.blit(sprites[current_sprite], (character_x, character_pos[1] - 48))
+            draw_text(f"Score: {score}", 10, 10)
+            draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+            pygame.display.flip()
+            clock.tick(30)
+
+        if clicked_index is None:
+            continue
+
+        # 캐릭터 점프 연출
+        if not flying:
+            if character_pos == tiles[clicked_index].center:
+                current_sprite = "surprised"
+            else:
+                jump_sound.play()
+                current_sprite = "jumping"
+                for i in range(10):
+                    lerp_x = character_pos[0] + (tiles[clicked_index].centerx - character_pos[0]) * (i + 1) / 10
+                    lerp_y = character_pos[1] + (tiles[clicked_index].centery - character_pos[1]) * (i + 1) / 10
+                    screen.blit(background_image, (0, 0))
+                    shake_offset = draw_tiles(tiles, removed_tiles)
+                    character_x = lerp_x - 24
+                    screen.blit(sprites["jumping"], (character_x, lerp_y - 48))
+                    draw_text(f"Score: {score}", 10, 10)
+                    draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+                    pygame.display.flip()
+                    clock.tick(30)
+                character_pos = tiles[clicked_index].center
+                current_sprite = "surprised"
+
+        # 발판 흔들림 + 효과음
+        earthquake_sound.play()
+        for i in range(45):
+            screen.blit(background_image, (0, 0))
+            shake_offset = draw_tiles(tiles, removed_tiles, highlight=clicked_index, animate_highlight=True, anim_progress=i)
+            sprite_key = (
+                "flying_1" if flying and int(time.time() * 2) % 2 == 0 else
+                "flying_2" if flying else "surprised"
+            )
+            character_x = character_pos[0] - 24 + (0 if flying else shake_offset)
+            screen.blit(sprites[sprite_key], (character_x, character_pos[1] - 48))
+            draw_text(f"Score: {score}", 10, 10)
+            draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+            pygame.display.flip()
+            clock.tick(30)
+        earthquake_sound.fadeout(30)
+
+        all_indexes = list(range(len(tiles)))
+        remove_count = 3 if random.random() < 0.85 else 4
+        removed_this_turn = random.sample(all_indexes, remove_count)
+
+        if clicked_index in removed_this_turn and not flying:
+            falling_sound.play()  # 떨어질 때 효과음
+            current_sprite = "falling"
+            for i in range(30):
+                screen.blit(background_image, (0, 0))
+                draw_tiles(tiles, removed_this_turn)
+                falling_sprite = sprites["falling"].copy()
+                alpha = max(int(255 * (1 - i / 29)), 0)
+                falling_sprite.set_alpha(alpha)
+                y_offset = i * 2
+                screen.blit(falling_sprite, (character_pos[0] - 24, character_pos[1] - 48 + y_offset))
+                draw_text(f"Score: {score}", 10, 10)
+                pygame.display.flip()
+                clock.tick(30)
+            pygame.time.wait(1000)
+            alive = False
+            break
+        else:
+            current_sprite = "raising"
+            for i in range(30):
+                screen.blit(background_image, (0, 0))
+                draw_tiles(tiles, removed_this_turn)
+                sprite_key = (
+                    "flying_1" if flying and int(time.time() * 2) % 2 == 0 else
+                    "flying_2" if flying else "raising"
+                )
+                screen.blit(sprites[sprite_key], (character_pos[0] - 24, character_pos[1] - 48))
+                draw_text(f"Score: {score}", 10, 10)
+                draw_text(f"Rocket Used: {'Yes' if rocket_used else 'No'}", 10, 40)
+                pygame.display.flip()
+                clock.tick(30)
+
+        pygame.time.wait(500)
+        current_sprite = "standing"
+        flying = False
+        score += 1
+
+    game_over(score)
+
+intro_animation()
+show_intro()
+while True:
+    main()
