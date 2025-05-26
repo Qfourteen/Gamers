@@ -359,38 +359,37 @@ def game_over_screen(screen, font, score, background_surface=None, inverted=Fals
     # screen.blit(high_score_label, (high_score_group_x, y_start + 120))
     # screen.blit(high_score_value, (high_score_group_x + high_score_label.get_width() + 10, y_start + 120))
 
-    restart_color = fg_color
-    quit_color = fg_color
+    # restart_color = fg_color
+    # quit_color = fg_color
 
-    if pressed_button == "restart":
-        restart_color = (255, 204, 51)
-    if pressed_button == "quit":
-        quit_color = (255, 204, 51)
+    # if pressed_button == "restart":
+    #     restart_color = (255, 204, 51)
+    # if pressed_button == "quit":
+    #     quit_color = (255, 204, 51)
 
-    restart_text = font.render("Restart", True, restart_color)
-    quit_text = font.render("Quit", True, quit_color)
-
-    restart_pos = (center_x + 20, y_start + 180)
-    quit_pos = (center_x - quit_text.get_width() - 40, y_start + 180)
-
-    mouse_pos = pygame.mouse.get_pos()
-
-    restart_rect = restart_text.get_rect(topleft=restart_pos)
-    quit_rect = quit_text.get_rect(topleft=quit_pos)
-
+    # restart_text = font.render("Restart", True, restart_color)
+    # quit_text = font.render("Quit", True, quit_color)
+    #
+    # restart_pos = (center_x + 20, y_start + 180)
+    # quit_pos = (center_x - quit_text.get_width() - 40, y_start + 180)
+    #
+    # mouse_pos = pygame.mouse.get_pos()
+    #
+    # restart_rect = restart_text.get_rect(topleft=restart_pos)
+    # quit_rect = quit_text.get_rect(topleft=quit_pos)
+    #
     # 마우스 올렸을 때 노란색으로 변경 (버튼이 눌린 상태가 아니면)
-    if pressed_button is None:
-        if restart_rect.collidepoint(mouse_pos):
-            restart_text = font.render("Restart", True, (255, 204, 51))
-        if quit_rect.collidepoint(mouse_pos):
-            quit_text = font.render("Quit", True, (255, 204, 51))
-
-    screen.blit(restart_text, restart_pos)
-    screen.blit(quit_text, quit_pos)
+    # if pressed_button is None:
+    #     if restart_rect.collidepoint(mouse_pos):
+    #         restart_text = font.render("Restart", True, (255, 204, 51))
+    #     if quit_rect.collidepoint(mouse_pos):
+    #         quit_text = font.render("Quit", True, (255, 204, 51))
+    #
+    # screen.blit(restart_text, restart_pos)
+    # screen.blit(quit_text, quit_pos)
 
     pygame.display.flip()
 
-    return restart_rect, quit_rect
 
 
 async def main():
@@ -399,7 +398,6 @@ async def main():
     # high_score = load_high_score()
     global score
     while running:
-        await asyncio.sleep(1.5)
         dino = Dino()
         base_speed = 7
         speed_increment = 0.0015
@@ -415,11 +413,13 @@ async def main():
         current_mode_is_night = False
 
         while not game_over:
-            CLOCK.tick(60)
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
+                if event.type == pygame.MOUSEBUTTONUP:
+                    dino.jump()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         dino.jump()
@@ -486,6 +486,7 @@ async def main():
 
             pygame.display.flip()
             score += 1
+            CLOCK.tick(40)
             await asyncio.sleep(0.01)
 
         # 게임오버 순간 화면 캡처
@@ -495,49 +496,11 @@ async def main():
         #     high_score = score
         #     save_high_score(high_score)
 
-        waiting = True
-        pressed = None
-
         # 캡처한 화면을 game_over_screen 함수에 넘기기 (함수 수정 필요)
-        restart_rect, quit_rect = game_over_screen(SCREEN, font, score,
-                                                   background_surface=game_over_surface,
-                                                   inverted=blend > 0.5)
+        game_over_screen(SCREEN, font, score, background_surface=game_over_surface, inverted=blend > 0.5)
 
-        while waiting:
-            CLOCK.tick(30)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    waiting = False
-                    running = False
-                # 마우스 클릭이 안 됨
-                # if event.type == pygame.MOUSEBUTTONDOWN:
-                #     if event.button == 1:  # 왼쪽 클릭
-                #         if restart_rect.collidepoint(event.pos):
-                #             pressed = "restart"
-                #         elif quit_rect.collidepoint(event.pos):
-                #             pressed = "quit"
-                # if event.type == pygame.MOUSEBUTTONUP:
-                #     if event.button == 1:
-                #         if pressed == "restart" and restart_rect.collidepoint(event.pos):
-                #             waiting = False  # 게임 재시작
-                #         elif pressed == "quit" and quit_rect.collidepoint(event.pos):
-                #             waiting = False
-                #             running = False  # 게임 종료
-                #         pressed = None
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        waiting = False
-                        pressed = None
-                    elif event.key == pygame.K_ESCAPE:
-                        waiting = False
-                        running = False
-
-            restart_rect, quit_rect = game_over_screen(SCREEN, font, score,
-                                                       background_surface=game_over_surface,
-                                                       inverted=blend > 0.5,
-                                                       pressed_button=pressed)
-            await asyncio.sleep(0.01)
-        await asyncio.sleep(0.01)
+        running = False
+        await asyncio.sleep(2)
 
     pygame.quit()
 

@@ -14,6 +14,9 @@
     <!-- utilities -->
     <script src="/static/js/score-utils.js"></script>
     <script src="/static/js/toast.js" defer></script>
+    <script>
+        const VISIT_KEY = "1944";
+    </script>
     <script src="/static/js/loader.js" defer></script>
     <link href="/static/css/loader.css" rel="stylesheet">
     <style>
@@ -65,7 +68,7 @@
     <div id="loading-screen">
         <div class="spinner-border text-info" role="status" style="width: 8rem; height: 8rem;"></div>
         <h1>로딩 중: 잠시만 기다리세요.</h1>
-        <p class="mt-4 fs-5 text-muted" id="loader-message">팁: 게임이 진행이 안 되는 상황인가요? 브라우저 새로고침을 해보세요.</p>
+        <p class="mt-4 fs-5 text-muted ms-3 me-3" id="loader-message">팁: 게임이 진행이 안 되는 상황인가요? <b>게임 다시 시작</b>을 눌러보세요.</p>
     </div>
 
     <div class="toast-container position-fixed top-0 start-0 p-3">
@@ -93,6 +96,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/policy">개인정보 처리 방침</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/games/1944">게임 다시 시작</a>
+                </li>
             </ul>
         </div>
     </div>
@@ -109,7 +115,7 @@
                 <div class="card-body text-center">
                     <div class="mt-3 mb-3 text-center" id="end-message" style="display: none;">
                         <h3>게임이 종료되었습니다.</h3>
-                        <button id="restart-game" class="btn btn-warning">다시 시작</button>
+                        <button id="restart-game" class="btn btn-outline-dark btn-lg">다시 시작</button>
                     </div>
                     <div id="game-container">
                         <div id="loading-indicator" style="display:none;">
@@ -122,7 +128,7 @@
                     </div>
 
                     <div class="mt-3">
-                        <button id="start-game" class="btn btn-success me-2">게임 시작</button>
+                        <button id="start-game" class="btn btn-success btn-lg me-2">게임 시작</button>
 
                     </div>
                 </div>

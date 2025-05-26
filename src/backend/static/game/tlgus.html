@@ -14,6 +14,9 @@
     <!-- utilities -->
     <script src="/static/js/score-utils.js"></script>
     <script src="/static/js/toast.js" defer></script>
+    <script>
+        const VISIT_KEY = "tlgus";
+    </script>
     <script src="/static/js/loader.js" defer></script>
     <link href="/static/css/loader.css" rel="stylesheet">
     <style>
@@ -28,7 +31,7 @@
             border: none;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-        #game-canvas {
+        #canvas {
             display: block;
             margin: 0;
             padding: 0;
@@ -65,7 +68,7 @@
     <div id="loading-screen">
         <div class="spinner-border text-info" role="status" style="width: 8rem; height: 8rem;"></div>
         <h1>로딩 중: 잠시만 기다리세요.</h1>
-        <p class="mt-4 fs-5 text-muted" id="loader-message">팁: 게임이 진행이 안 되는 상황인가요? 브라우저 새로고침을 해보세요.</p>
+        <p class="mt-4 fs-5 text-muted ms-3 me-3" id="loader-message">팁: 게임이 진행이 안 되는 상황인가요? <b>게임 다시 시작</b>을 눌러보세요.</p>
     </div>
     <div class="toast-container position-fixed top-0 start-0 p-3">
       <div id="liveToast" class="toast bg-success-subtle" role="alert" aria-live="assertive" aria-atomic="true">
@@ -92,6 +95,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/policy">개인정보 처리 방침</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/games/tlgus">게임 다시 시작</a>
+                </li>
             </ul>
         </div>
     </div>
@@ -108,7 +114,7 @@
                 <div class="card-body text-center">
                     <div class="mt-3 mb-3 text-center" id="end-message" style="display: none;">
                         <h3>게임이 종료되었습니다.</h3>
-                        <button id="restart-game" class="btn btn-warning">다시 시작</button>
+                        <button id="restart-game" class="btn btn-outline-dark btn-lg">다시 시작</button>
                     </div>
                     <div id="game-container">
                         <div id="loading-indicator" style="display:none;">
@@ -117,11 +123,11 @@
                             </div>
                             <p class="mt-2">게임을 로딩중입니다...</p>
                         </div>
-                        <canvas id="game-canvas" tabindex="0"></canvas>
+                        <canvas id="canvas"></canvas>
                     </div>
 
                     <div class="mt-3">
-                        <button id="start-game" class="btn btn-success me-2">게임 시작</button>
+                        <button id="start-game" class="btn btn-success btn-lg me-2">게임 시작</button>
 
                     </div>
                 </div>
@@ -140,7 +146,7 @@
 
                     <h5>조작 방법:</h5>
                     <ul class="list-unstyled">
-                        <li><span class="key-control">Space</span> 점프</li>
+                        <li><span class="key-control">Space</span> <span class="key-control">마우스 좌클릭</span> 점프</li>
                     </ul>
 
                     <div class="alert alert-warning">
@@ -203,9 +209,9 @@
     const startButton = document.getElementById("start-game");
     const restartButton = document.getElementById("restart-game");
     const loadingIndicator = document.getElementById("loading-indicator");
-    const gameCanvas = document.getElementById("game-canvas");
+    const gameCanvas = document.getElementById("canvas");
+    gameCanvas.addEventListener('mousedown', e => console.log(e.offsetX, e.offsetY));
     gameCanvas.setAttribute('tabindex', '0');
-
     // pyodide 자산 불러오기
     let pyodidePromise = null;
     async function getPyodide() {
@@ -261,10 +267,9 @@
             // 게임 종료 화면 표시
             document.getElementById("end-message").style.display = "block"
             // gameCanvas.blur();
-          gameCanvas.focus();
 
             // 점수 처리
-            const finalScore = ~~(pyodide.globals.get("score") / 10);
+            const finalScore = ~~(pyodide.globals.get("score"));
             console.log("Final score:", finalScore);
 
             // Submit score and refresh high scores
