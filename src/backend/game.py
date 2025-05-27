@@ -21,6 +21,10 @@ async def nineteenfourtyfour():
 async def endless_jump():
     return FileResponse("./static/game/endlessjump.html")
 
+@game_router.get("/no-more-floor")
+async def no_more_floor():
+    return FileResponse("./static/game/TJ.py")
+
 @game_router.post("/api/scores", response_model=ScoreResponse)
 async def create_score(
     score_data: ScoreCreate,
