@@ -61,7 +61,7 @@ function CardGroup() {
               rel="noopener noreferrer"
               className="h-100 text-decoration-none"
             >
-              <Card.Img variant="top" src={card.image_url} alt={card.card_title} />
+              <Card.Img variant="top" src={`data:image/png;base64,${card.image_base64}`} alt={card.card_title} />
               <Card.Body>
                 <Card.Subtitle className="mb-2 text-muted">{card.name}</Card.Subtitle>
                 <Card.Title>{card.card_title}</Card.Title>
