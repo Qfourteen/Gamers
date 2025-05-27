@@ -23,7 +23,7 @@ async def endless_jump():
 
 @game_router.get("/no-more-floor")
 async def no_more_floor():
-    return FileResponse("./static/game/TJ.py")
+    return FileResponse("./static/game/TJ.html")
 
 @game_router.post("/api/scores", response_model=ScoreResponse)
 async def create_score(

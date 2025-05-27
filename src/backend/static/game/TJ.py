@@ -36,6 +36,7 @@ tile_positions = [
 
 TILE_SIZE = 50
 rankings = []
+score = 0
 
 def load_image(path, size=(50, 50)):
     img = pygame.image.load(path).convert_alpha()
@@ -162,74 +163,107 @@ def draw_tiles(tiles, removed, highlight=None, animate_highlight=False, anim_pro
     return shake_offset if animate_highlight else 0
 
 
-
 async def game_over(score):
     global rankings
+    # 점수 목록 갱신
     rankings.append(score)
     rankings = sorted(rankings, reverse=True)[:5]
 
-    retry_rect = pygame.Rect((WIDTH // 2) - 130, HEIGHT - 80, 120, 50)
+    # Quit 버튼 영역
     quit_rect = pygame.Rect((WIDTH // 2), HEIGHT - 80, 120, 50)
     waiting = True
     confirm_quit = False
 
+    # Yes/No 버튼 영역
     yes_rect = pygame.Rect(WIDTH // 2 - 110, HEIGHT // 2 + 40, 80, 40)
-    no_rect = pygame.Rect(WIDTH // 2 + 30, HEIGHT // 2 + 40, 80, 40)
+    no_rect  = pygame.Rect(WIDTH // 2 + 30,  HEIGHT // 2 + 40, 80, 40)
 
     while waiting:
+        # 배경, 스프라이트 그리기
         screen.blit(background_image, (0, 0))
+        screen.blit(crying_sprite,    (0, 0))
         mouse_pos = pygame.mouse.get_pos()
-        screen.blit(crying_sprite, (0, 0))
 
-        draw_text("Game Over!", 360, 50, RED, font=font_intro)
-        draw_text(f"Score: {score}", 360, 90, font=font_intro)
-        # draw_text("Top 5:", 360, 130, font=font_intro)
-        # for idx, s in enumerate(rankings):
-        #     draw_text(f"{idx+1}. {s}", 370, 160 + idx * 20, font=font_intro)
-
-        # Retry 버튼
-        # pygame.draw.rect(screen, GRAY if retry_rect.collidepoint(mouse_pos) else BLACK, retry_rect)
-        # screen.blit(font_intro.render("Retry?", True, WHITE), font_intro.render("Retry?", True, WHITE).get_rect(center=retry_rect.center))
+        # “Game Over” 텍스트
+        draw_text("Game Over!", 360,  50, RED,   font=font_intro)
+        draw_text(f"Score: {score}", 360, 90,       font=font_intro)
 
         # Quit 버튼
-        pygame.draw.rect(screen, RED if quit_rect.collidepoint(mouse_pos) else BLACK, quit_rect)
-        screen.blit(font_intro.render("Quit", True, WHITE), font_intro.render("Quit", True, WHITE).get_rect(center=quit_rect.center))
+        pygame.draw.rect(
+            screen,
+            RED if quit_rect.collidepoint(mouse_pos) else BLACK,
+            quit_rect
+        )
+        label_quit = font_intro.render("Quit", True, WHITE)
+        screen.blit(
+            label_quit,
+            label_quit.get_rect(center=quit_rect.center)
+        )
 
-        # Quit 확인 창
+        # Quit 확인창
         if confirm_quit:
             confirm_rect = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 2 - 60, 300, 120)
             pygame.draw.rect(screen, BLACK, confirm_rect)
             pygame.draw.rect(screen, WHITE, confirm_rect, 2)
-            draw_text("게임을 종료하시겠습니까?", confirm_rect.x + 30, confirm_rect.y + 20, WHITE, font_intro)
+            draw_text(
+                "게임을 종료하시겠습니까?",
+                confirm_rect.x + 30,
+                confirm_rect.y + 20,
+                WHITE,
+                font=font_intro
+            )
 
-            # Yes / No 버튼
-            pygame.draw.rect(screen, RED if yes_rect.collidepoint(mouse_pos) else BLACK, yes_rect)
-            pygame.draw.rect(screen, GRAY if no_rect.collidepoint(mouse_pos) else BLACK, no_rect)
-            screen.blit(font_intro.render("Yes", True, WHITE), font_intro.render("Yes", True, WHITE).get_rect(center=yes_rect.center))
-            screen.blit(font_intro.render("No", True, WHITE), font_intro.render("No", True, WHITE).get_rect(center=no_rect.center))
+            # Yes 버튼
+            pygame.draw.rect(
+                screen,
+                RED if yes_rect.collidepoint(mouse_pos) else BLACK,
+                yes_rect
+            )
+            label_yes = font_intro.render("Yes", True, WHITE)
+            screen.blit(
+                label_yes,
+                label_yes.get_rect(center=yes_rect.center)
+            )
+
+            # No 버튼
+            pygame.draw.rect(
+                screen,
+                GRAY if no_rect.collidepoint(mouse_pos) else BLACK,
+                no_rect
+            )
+            label_no = font_intro.render("No", True, WHITE)
+            screen.blit(
+                label_no,
+                label_no.get_rect(center=no_rect.center)
+            )
 
         pygame.display.flip()
 
+        # 이벤트 처리
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+                return          # 즉시 함수 종료
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if confirm_quit:
                     if yes_rect.collidepoint(event.pos):
                         pygame.quit()
+                        return  # 즉시 종료
                     elif no_rect.collidepoint(event.pos):
                         confirm_quit = False
                 else:
-                    if retry_rect.collidepoint(event.pos):
-                        waiting = False
-                    elif quit_rect.collidepoint(event.pos):
+                    if quit_rect.collidepoint(event.pos):
                         confirm_quit = True
+
+        # 브라우저 이벤트 루프에 제어권 반환
         await asyncio.sleep(0.01)
+
 
 
 async def main():
     await intro_animation()
     await show_intro()
+    global score
     while True:
         tiles = [pygame.Rect(*pos, TILE_SIZE, TILE_SIZE) for pos in tile_positions]
         character_pos = tiles[3].center
@@ -388,4 +422,5 @@ async def main():
             score += 1
             await asyncio.sleep(0.01)
         await game_over(score)
+        break
 asyncio.ensure_future(main())
