@@ -25,6 +25,11 @@ async def endless_jump():
 async def no_more_floor():
     return FileResponse("./static/game/TJ.html")
 
+@game_router.get("/tlgus")
+async def dino_boo():
+    return FileResponse("./static/game/tlgus.html")
+
+
 @game_router.post("/api/scores", response_model=ScoreResponse)
 async def create_score(
     score_data: ScoreCreate,
