@@ -45,7 +45,7 @@ class ScoreManager {
      * @param {number} limit - Number of scores to fetch (default: 5)
      * @returns {Promise<Array>} Array of high scores
      */
-    async getHighScores(limit = 5) {
+    async getHighScores(limit = 10) {
         try {
             const response = await fetch(`/games/api/scores?game_url=${encodeURIComponent(this.currentGameUrl)}&limit=${limit}`, {
                 method: 'GET',
@@ -68,7 +68,7 @@ class ScoreManager {
      * @param {string} tableBodyId - ID of the table body element
      * @param {number} limit - Number of scores to display
      */
-    async displayHighScores(tableBodyId, limit = 5) {
+    async displayHighScores(tableBodyId, limit = 10) {
         try {
             const scores = await this.getHighScores(limit);
             const tableBody = document.getElementById(tableBodyId);
