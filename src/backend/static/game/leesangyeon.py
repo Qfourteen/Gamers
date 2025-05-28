@@ -611,7 +611,7 @@ async def main():
             save_y = player.y - TILE_SIZE
             screen.blit(msg, (save_x, save_y))
 
-        death = font1.render(f"death : {death_count}", True, (0, 0, 0))
+        death = font1.render(f"death : {death_count}\n", True, (0, 0, 0))
         screen.blit(death, (1000, 20))  # 화면 우측 상단에 표시
 
         # 현재 시간과 시작 시간의 차이 (경과 시간)
@@ -619,7 +619,7 @@ async def main():
             elapsed_seconds = (current_time - start_time) // 1000
 
         time = font1.render(f"time : {elapsed_seconds}", True, (0, 0, 0))
-        screen.blit(time, (1000, 40))
+        screen.blit(time, (1000, 60))
 
         pygame.display.flip()
         clock.tick(60)
