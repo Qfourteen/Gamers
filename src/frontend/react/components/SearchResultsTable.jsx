@@ -30,15 +30,8 @@ function SearchResultsTable({ data }) {
             {data.map((row, idx) => (
               <tr key={idx}>
                 <td>
-                  <a
-                    href={row.game_id}
-                    className="text-decoration-none d-flex align-items-center"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
                     {row.name}
                     <FaExternalLinkAlt className="ms-1 text-muted" size={12} />
-                  </a>
                 </td>
                 <td>
                   {row.short_description || (

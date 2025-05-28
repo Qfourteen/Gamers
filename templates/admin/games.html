@@ -1,0 +1,308 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}게임 관리 - Gamers 관리자{% endblock %}
+{% block page_title %}게임 관리{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">게임 목록</h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGameModal">
+                    <i class="fas fa-plus"></i> 새 게임 추가
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>이름</th>
+                                <th>설명</th>
+                                <th>태그</th>
+                                <th>카드 관리</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for game in games %}
+                            <tr>
+                                <td>{{ game.name }}</td>
+                                <td>{{ game.short_description }}</td>
+                                <td>
+                                    {% for tag in game.tags %}
+                                    <span class="badge bg-info">{{ tag }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <a href="/admin/games/{{ game.id }}" class="btn btn-sm btn-outline-primary">
+                                        카드 관리
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary edit-game" 
+                                            data-game-id="{{ game.id }}"
+                                            data-game-name="{{ game.name }}"
+                                            data-game-short-description="{{ game.short_description }}"
+                                            data-game-description="{{ game.description }}"
+                                            data-game-tags="{{ game.tags|join(',') }}"
+                                            data-game-url="{{ game.url }}"
+                                            data-bs-toggle="modal" data-bs-target="#editGameModal">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-game" 
+                                            data-game-id="{{ game.id }}"
+                                            data-game-name="{{ game.name }}"
+                                            data-bs-toggle="modal" data-bs-target="#deleteGameModal">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">등록된 게임이 없습니다.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Game Modal -->
+<div class="modal fade" id="createGameModal" tabindex="-1" aria-labelledby="createGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createGameModalLabel">새 게임 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createGameForm">
+                    <div class="mb-3">
+                        <label for="createGameName" class="form-label">게임 이름</label>
+                        <input type="text" class="form-control" id="createGameName" name="name" required minlength="3" maxlength="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="createGameShortDescription" class="form-label">짧은 설명</label>
+                        <input type="text" class="form-control" id="createGameShortDescription" name="short_description" maxlength="200">
+                    </div>
+                    <div class="mb-3">
+                        <label for="createGameDescription" class="form-label">상세 설명</label>
+                        <textarea class="form-control" id="createGameDescription" name="description" rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createGameTags" class="form-label">태그 (쉼표로 구분)</label>
+                        <input type="text" class="form-control" id="createGameTags" name="tags">
+                    </div>
+                    <div class="mb-3">
+                        <label for="createGameUrl" class="form-label">URL</label>
+                        <input type="url" class="form-control" id="createGameUrl" name="url" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="submitCreateGame">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Game Modal -->
+<div class="modal fade" id="editGameModal" tabindex="-1" aria-labelledby="editGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editGameModalLabel">게임 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editGameForm">
+                    <input type="hidden" id="editGameId" name="game_id">
+                    <div class="mb-3">
+                        <label for="editGameName" class="form-label">게임 이름</label>
+                        <input type="text" class="form-control" id="editGameName" name="name" required minlength="3" maxlength="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameShortDescription" class="form-label">짧은 설명</label>
+                        <input type="text" class="form-control" id="editGameShortDescription" name="short_description" maxlength="200">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameDescription" class="form-label">상세 설명</label>
+                        <textarea class="form-control" id="editGameDescription" name="description" rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameTags" class="form-label">태그 (쉼표로 구분)</label>
+                        <input type="text" class="form-control" id="editGameTags" name="tags">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGameUrl" class="form-label">URL</label>
+                        <input type="url" class="form-control" id="editGameUrl" name="url" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="submitEditGame">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Game Modal -->
+<div class="modal fade" id="deleteGameModal" tabindex="-1" aria-labelledby="deleteGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteGameModalLabel">게임 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>정말 <strong id="deleteGameName"></strong> 게임을 삭제하시겠습니까?</p>
+                <p class="text-danger">주의: 이 게임에 연결된 모든 카드도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+                <form id="deleteGameForm">
+                    <input type="hidden" id="deleteGameId" name="game_id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="submitDeleteGame">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create Game
+    document.getElementById('submitCreateGame').addEventListener('click', async function() {
+        const name = document.getElementById('createGameName').value;
+        const shortDescription = document.getElementById('createGameShortDescription').value;
+        const description = document.getElementById('createGameDescription').value;
+        const tags = document.getElementById('createGameTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        const url = document.getElementById('createGameUrl').value;
+
+        try {
+            const response = await fetch('/api/admin/games', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    short_description: shortDescription,
+                    description: description,
+                    tags: tags,
+                    url: url
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+
+    // Edit Game - Populate Modal
+    document.querySelectorAll('.edit-game').forEach(button => {
+        button.addEventListener('click', function() {
+            const gameId = this.getAttribute('data-game-id');
+            const gameName = this.getAttribute('data-game-name');
+            const gameShortDescription = this.getAttribute('data-game-short-description');
+            const gameDescription = this.getAttribute('data-game-description');
+            const gameTags = this.getAttribute('data-game-tags');
+            const gameUrl = this.getAttribute('data-game-url');
+
+            document.getElementById('editGameId').value = gameId;
+            document.getElementById('editGameName').value = gameName;
+            document.getElementById('editGameShortDescription').value = gameShortDescription;
+            document.getElementById('editGameDescription').value = gameDescription;
+            document.getElementById('editGameTags').value = gameTags;
+            document.getElementById('editGameUrl').value = gameUrl;
+        });
+    });
+
+    // Edit Game - Submit
+    document.getElementById('submitEditGame').addEventListener('click', async function() {
+        const gameId = document.getElementById('editGameId').value;
+        const name = document.getElementById('editGameName').value;
+        const shortDescription = document.getElementById('editGameShortDescription').value;
+        const description = document.getElementById('editGameDescription').value;
+        const tags = document.getElementById('editGameTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        const url = document.getElementById('editGameUrl').value;
+
+        try {
+            const response = await fetch(`/api/admin/games/${gameId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    short_description: shortDescription,
+                    description: description,
+                    tags: tags,
+                    url: url
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+
+    // Delete Game - Populate Modal
+    document.querySelectorAll('.delete-game').forEach(button => {
+        button.addEventListener('click', function() {
+            const gameId = this.getAttribute('data-game-id');
+            const gameName = this.getAttribute('data-game-name');
+
+            document.getElementById('deleteGameId').value = gameId;
+            document.getElementById('deleteGameName').textContent = gameName;
+        });
+    });
+
+    // Delete Game - Submit
+    document.getElementById('submitDeleteGame').addEventListener('click', async function() {
+        const gameId = document.getElementById('deleteGameId').value;
+
+        try {
+            const response = await fetch(`/api/admin/games/${gameId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('오류가 발생했습니다: ' + (data.detail || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        }
+    });
+});
+</script>
+{% endblock %}

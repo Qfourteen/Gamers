@@ -9,5 +9,4 @@ src/backend/env.py
 node_modules
 package-lock.json
 src/backend/static/assets
-src/backend/static/js
-src/backend/static/index.html
+src/backend/static/react

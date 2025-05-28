@@ -1,0 +1,537 @@
+import pygame
+import random
+import math 
+
+pygame.init()
+WIDTH, HEIGHT = 800, 400
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Dino Boo Game")
+CLOCK = pygame.time.Clock()
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (120, 120, 120)
+
+DINO_WIDTH, DINO_HEIGHT = 40, 60
+DINO_Y_POS = HEIGHT - DINO_HEIGHT - 20
+GRAVITY = 0.6
+
+def lerp_color(c1, c2, t):
+    return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+
+def load_high_score(filename="highscore.txt"):
+    try:
+        with open(filename, "r") as f:
+            return int(f.read())
+    except:
+        return 0
+
+def save_high_score(score, filename="highscore.txt"):
+    with open(filename, "w") as f:
+        f.write(str(score))
+
+
+class Dino:
+    def __init__(self):
+        self.rect = pygame.Rect(50, DINO_Y_POS, DINO_WIDTH, DINO_HEIGHT)
+        self.velocity = 0
+        self.is_jumping = False
+        self.jump_time = 0  # 점프 시간 (프레임 단위)
+        
+        # 눈 깜빡임 관련
+        self.blink_timer = 0
+        self.blink_interval = random.randint(60, 180)  # 깜빡임 간격 (1~3초)
+        self.blink_duration = 6  # 깜빡임 지속 시간 (프레임)
+        self.blinking = False
+
+    def jump(self):
+        if not self.is_jumping:
+            self.velocity = -12
+            self.is_jumping = True
+            self.jump_time = 0
+
+    def update(self):
+        # 점프 업데이트
+        if self.is_jumping:
+            self.jump_time += 1
+
+        jump_smooth = math.sin(self.jump_time * 0.1) * 2 if self.is_jumping else 0
+        self.velocity += GRAVITY
+        self.rect.y += self.velocity - jump_smooth
+
+        if self.rect.y >= DINO_Y_POS:
+            self.rect.y = DINO_Y_POS
+            self.is_jumping = False
+            self.jump_time = 0
+
+        # 눈 깜빡임 업데이트
+        self.blink_timer += 1
+        if not self.blinking and self.blink_timer >= self.blink_interval:
+            self.blinking = True
+            self.blink_timer = 0
+        elif self.blinking and self.blink_timer >= self.blink_duration:
+            self.blinking = False
+            self.blink_timer = 0
+            self.blink_interval = random.randint(60, 180)  # 다음 깜빡임까지 시간 재설정
+
+    def draw(self, screen, inverted=False):
+        body_color = (135, 206, 250) if not inverted else (180, 220, 255)
+        eye_white = (255, 255, 255) if not inverted else (230, 240, 255)
+        pupil_color = (20, 40, 90) if not inverted else (50, 80, 140)
+        beak_color = (255, 180, 80) if not inverted else (255, 210, 130)
+        antenna_color = body_color
+
+        x = self.rect.x + self.rect.width // 2
+        y = self.rect.y + self.rect.height // 2
+        body_width = self.rect.width
+        body_height = self.rect.height
+
+        jump_progress = min(self.jump_time / 30, 1) if self.is_jumping else 0
+
+        antenna_offset_y = math.sin(self.jump_time * 0.3) * 4 if self.is_jumping else 0
+        head_offset_y = math.sin(self.jump_time * 0.3) * 3 if self.is_jumping else 0
+
+        # 몸통
+        body_rect = pygame.Rect(0, 0, int(body_width * 0.9), int(body_height * 1.0))
+        body_rect.midbottom = self.rect.midbottom
+        pygame.draw.ellipse(screen, body_color, body_rect)
+
+        # 머리
+        head_width = int(body_width * 0.65)
+        head_height = int(body_height * 0.65)
+        head_rect = pygame.Rect(0, 0, head_width, head_height)
+        head_rect.midbottom = (x + body_width // 3 - 4, body_rect.top + 8 + head_offset_y)
+        pygame.draw.ellipse(screen, body_color, head_rect)
+
+        # 뒷목 연결부
+        neck_connect_width = int(body_width * 0.3)
+        neck_connect_height = int(body_height * 0.3)
+        neck_rect1 = pygame.Rect(0, 0, neck_connect_width, neck_connect_height)
+        neck_rect1.center = (head_rect.left + neck_connect_width // 2 - 2, head_rect.bottom - neck_connect_height // 4 + head_offset_y)
+        pygame.draw.ellipse(screen, body_color, neck_rect1)
+
+        neck_rect2 = pygame.Rect(0, 0, neck_connect_width // 2, neck_connect_height // 2)
+        neck_rect2.center = (head_rect.left + neck_connect_width // 2 + 5, head_rect.bottom - neck_connect_height // 8 + head_offset_y)
+        pygame.draw.ellipse(screen, body_color, neck_rect2)
+
+        # 눈 (깜빡임 중이면 눈 흰자 대신 눈꺼풀 색으로)
+        eye_rect = pygame.Rect(0, 0, int(head_width * 0.35), int(head_height * 0.25))
+        eye_rect.center = (head_rect.centerx + 5, head_rect.centery - 8)
+
+        if self.blinking:
+            # 눈꺼풀 색: 몸통색보다 조금 어둡게
+            eyelid_color = (100, 150, 200) if not inverted else (140, 180, 210)
+            pygame.draw.rect(screen, eyelid_color, eye_rect)
+        else:
+            pygame.draw.ellipse(screen, eye_white, eye_rect)
+            pupil_radius = eye_rect.height // 3
+            pupil_center = (eye_rect.centerx + 1, eye_rect.centery)
+            pygame.draw.circle(screen, pupil_color, pupil_center, pupil_radius)
+
+        # 부리
+        beak_tip = (eye_rect.centerx + 15, eye_rect.centery + 1)
+        beak_back_top = (beak_tip[0] - 6, beak_tip[1] - 3)
+        beak_back_bottom = (beak_tip[0] - 6, beak_tip[1] + 3)
+        pygame.draw.polygon(screen, beak_color, [beak_tip, beak_back_top, beak_back_bottom])
+
+        # 신발
+        shoe_width = 10
+        shoe_height = 6
+        left_shoe = pygame.Rect(self.rect.x + 5, self.rect.y + self.rect.height - shoe_height, shoe_width, shoe_height)
+        right_shoe = pygame.Rect(self.rect.x + self.rect.width - shoe_width - 5, self.rect.y + self.rect.height - shoe_height, shoe_width, shoe_height)
+        pygame.draw.rect(screen, beak_color, left_shoe)
+        pygame.draw.rect(screen, beak_color, right_shoe)
+        # 발 위치 보정: jump_time에 따라 y좌표 살짝 위아래
+        foot_offset_y = 0
+        if self.is_jumping:
+            # jump_time이 증가할수록 sin값으로 -5 ~ +5 사이 변동
+            foot_offset_y = math.sin(self.jump_time * 0.4) * 5
+
+        # 왼발
+        left_shoe = pygame.Rect(
+            self.rect.x + 5, 
+            self.rect.y + self.rect.height - shoe_height + foot_offset_y, 
+            shoe_width, shoe_height
+        )
+        # 오른발
+        right_shoe = pygame.Rect(
+            self.rect.x + self.rect.width - shoe_width - 5, 
+            self.rect.y + self.rect.height - shoe_height + foot_offset_y, 
+            shoe_width, shoe_height
+        )
+        pygame.draw.rect(screen, beak_color, left_shoe)
+        pygame.draw.rect(screen, beak_color, right_shoe)
+
+
+        # 더듬이 (머리 흔들림 반영)
+        antenna_base = (head_rect.centerx - 5, head_rect.top + 5 + antenna_offset_y)
+        antenna_tip = (antenna_base[0] - 6, antenna_base[1] - 15 + antenna_offset_y)
+        pygame.draw.line(screen, antenna_color, antenna_base, antenna_tip, 2)
+
+
+
+class CactusSmall:
+    def __init__(self, speed):
+        self.speed = speed
+        self.width = 20
+        self.height = 40
+        self.rect = pygame.Rect(WIDTH, HEIGHT - self.height - 20, self.width, self.height)
+
+    def update(self):
+        self.rect.x -= self.speed
+
+    def draw(self, screen, inverted=False):
+        color = (255, 180, 0) if inverted else (50, 200, 50)  # 낮엔 녹색, 밤엔 주황빛
+        base = self.rect
+        # 본체
+        pygame.draw.rect(screen, color, base)
+        # 옆 가지
+        arm1 = pygame.Rect(base.x - 6, base.y + 10, 6, 15)
+        arm2 = pygame.Rect(base.right, base.y + 20, 6, 15)
+        pygame.draw.rect(screen, color, arm1)
+        pygame.draw.rect(screen, color, arm2)
+
+    def off_screen(self):
+        return self.rect.right < 0
+
+
+class Cloud:
+    def __init__(self):
+        self.width = random.randint(60, 100)
+        self.height = 30
+        self.x = WIDTH + random.randint(0, 300)
+        self.y = random.randint(50, 150)
+        self.speed = 3
+
+    def update(self):
+        self.x -= self.speed
+        if self.x + self.width < 0:
+            self.x = WIDTH + random.randint(50, 300)
+            self.y = random.randint(50, 150)
+
+    def draw(self, screen, inverted=False, blend=0):
+    # 밝은 구름 색상 (카툰 느낌)
+        day_color = (200, 230, 255)         # 밝은 하늘색
+        night_color = (160, 160, 200)       # 밤하늘용 보라빛 회색
+
+        color = lerp_color(day_color, night_color, blend)
+        pygame.draw.ellipse(screen, color, (self.x, self.y, self.width, self.height))
+        pygame.draw.ellipse(screen, color, (self.x + self.width//2, self.y - 10, self.width//2, self.height))
+
+class Star:
+    def __init__(self):
+        self.x = random.randint(0, WIDTH)
+        self.y = random.randint(0, HEIGHT // 2)  # 하늘 영역에만 별 배치
+        self.base_alpha = random.randint(100, 200)  # 기본 밝기
+        self.alpha = self.base_alpha
+        self.alpha_direction = random.choice([-1, 1])  # 밝기 증가/감소 방향
+        self.alpha_speed = random.uniform(0.5, 1.5)  # 반짝임 속도
+
+    def update(self):
+        self.alpha += self.alpha_direction * self.alpha_speed
+        if self.alpha >= 255:
+            self.alpha = 255
+            self.alpha_direction = -1
+        elif self.alpha <= 100:
+            self.alpha = 100
+            self.alpha_direction = 1
+
+    def draw(self, screen):
+        star_color = (255, 255, 255, int(self.alpha))
+        star_surface = pygame.Surface((3, 3), pygame.SRCALPHA)
+        pygame.draw.circle(star_surface, star_color, (1, 1), 1)
+        screen.blit(star_surface, (self.x, self.y))
+
+class Background:
+    def __init__(self, speed):
+        self.x1 = 0
+        self.x2 = WIDTH
+        self.speed = speed
+        self.clouds = [Cloud() for _ in range(3)]
+        self.stars = [Star() for _ in range(50)]  # 별 50개 생성
+
+    def update(self):
+        self.x1 -= self.speed
+        self.x2 -= self.speed
+        if self.x1 + WIDTH <= 0:
+            self.x1 = self.x2 + WIDTH
+        if self.x2 + WIDTH <= 0:
+            self.x2 = self.x1 + WIDTH
+
+        for cloud in self.clouds:
+            cloud.update()
+        for star in self.stars:
+            star.update()
+
+    def draw(self, screen, blend=0):
+        bg_color = lerp_color(WHITE, BLACK, blend)
+        screen.fill(bg_color)
+
+        if blend > 0.5:  # 밤모드일 때만 별 그리기 (blend 0~1 기준)
+            for star in self.stars:
+                star.draw(screen)
+
+        for cloud in self.clouds:
+            cloud.draw(screen, blend=blend)
+
+        ground_color = lerp_color(BLACK, WHITE, blend)
+        pygame.draw.rect(screen, ground_color, (self.x1, HEIGHT - 20, WIDTH, 20))
+        pygame.draw.rect(screen, ground_color, (self.x2, HEIGHT - 20, WIDTH, 20))
+
+
+
+
+def draw_sun(screen, alpha):
+    x, y = WIDTH - 80, 80
+    sun_surface = pygame.Surface((120, 120), pygame.SRCALPHA)
+
+    # 중심 해 (노란색)
+    center = (60, 60)
+    sun_color = (255, 223, 0, alpha)
+    pygame.draw.circle(sun_surface, sun_color, center, 25)
+
+    # 햇살 10개, 작은 타원
+    for i in range(10):  # ← 개수 줄임
+        angle = i * 36  # 360도 / 10 = 36도 간격
+        direction = pygame.math.Vector2(1, 0).rotate(angle)
+        dx, dy = int(35 * direction.x), int(35 * direction.y)
+        cx, cy = center[0] + dx, center[1] + dy
+
+        # 작아진 타원 (길이 14, 높이 5)
+        ellipse_surface = pygame.Surface((14, 5), pygame.SRCALPHA)
+        pygame.draw.ellipse(ellipse_surface, sun_color, (0, 0, 14, 5))
+
+        rotated = pygame.transform.rotate(ellipse_surface, -angle)
+        rect = rotated.get_rect(center=(cx, cy))
+        sun_surface.blit(rotated, rect)
+
+    screen.blit(sun_surface, (x - 60, y - 60))
+
+
+def draw_moon(screen, alpha):
+    x, y = WIDTH - 80, 80
+    moon_surface = pygame.Surface((80, 80), pygame.SRCALPHA)
+    pygame.draw.circle(moon_surface, (255, 255, 255, alpha), (40, 40), 30)
+    pygame.draw.circle(moon_surface, (0, 0, 0, alpha), (50, 35), 20)
+    screen.blit(moon_surface, (x - 40, y - 40))
+    
+    
+def game_over_screen(screen, font, score, high_score, background_surface=None, inverted=False, pressed_button=None):
+    bg_color = BLACK if inverted else WHITE
+    fg_color = WHITE if inverted else BLACK
+    if background_surface:
+        screen.blit(background_surface, (0, 0))
+
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((255, 255, 255, 180) if not inverted else (0, 0, 0, 180))
+    screen.blit(overlay, (0, 0))
+
+    # ... 나머지 기존 게임오버 텍스트, 버튼 렌더링 코드 그대로 ...
+
+
+    big_font = pygame.font.SysFont(None, 72)
+    center_x = WIDTH // 2
+    y_start = HEIGHT // 2 - 120
+
+    game_over_text = big_font.render("GAME OVER", True, fg_color)
+    screen.blit(game_over_text, (center_x - game_over_text.get_width() // 2, y_start))
+
+    score_label = font.render("Score:", True, fg_color)
+    score_value = pygame.font.SysFont(None, 30).render(f"{score:07d}", True, fg_color)
+
+    high_score_label = font.render("High Score:", True, fg_color)
+    high_score_value = pygame.font.SysFont(None, 30).render(f"{high_score:07d}", True, fg_color)
+
+    # 정렬
+    score_group_width = score_label.get_width() + 10 + score_value.get_width()
+    score_group_x = center_x - score_group_width // 2
+    screen.blit(score_label, (score_group_x, y_start + 80))
+    screen.blit(score_value, (score_group_x + score_label.get_width() + 10, y_start + 80))
+
+    high_score_group_width = high_score_label.get_width() + 10 + high_score_value.get_width()
+    high_score_group_x = center_x - high_score_group_width // 2
+    screen.blit(high_score_label, (high_score_group_x, y_start + 120))
+    screen.blit(high_score_value, (high_score_group_x + high_score_label.get_width() + 10, y_start + 120))
+
+    restart_color = fg_color
+    quit_color = fg_color
+
+    if pressed_button == "restart":
+        restart_color = (255, 204, 51)
+    if pressed_button == "quit":
+        quit_color = (255, 204, 51)
+
+    restart_text = font.render("Restart", True, restart_color)
+    quit_text = font.render("Quit", True, quit_color)
+
+    restart_pos = (center_x + 20, y_start + 180)
+    quit_pos = (center_x - quit_text.get_width() - 40, y_start + 180)
+
+    mouse_pos = pygame.mouse.get_pos()
+
+    restart_rect = restart_text.get_rect(topleft=restart_pos)
+    quit_rect = quit_text.get_rect(topleft=quit_pos)
+
+    # 마우스 올렸을 때 노란색으로 변경 (버튼이 눌린 상태가 아니면)
+    if pressed_button is None:
+        if restart_rect.collidepoint(mouse_pos):
+            restart_text = font.render("Restart", True, (255, 204, 51))
+        if quit_rect.collidepoint(mouse_pos):
+            quit_text = font.render("Quit", True, (255, 204, 51))
+
+    screen.blit(restart_text, restart_pos)
+    screen.blit(quit_text, quit_pos)
+
+    pygame.display.flip()
+
+    return restart_rect, quit_rect
+
+
+
+def main():
+    font = pygame.font.SysFont(None, 36)
+    running = True
+    high_score = load_high_score()
+
+    while running:
+        dino = Dino()
+        base_speed = 7
+        speed_increment = 0.0015
+        background = Background(base_speed)
+        obstacles = []
+        score = 0
+        game_over = False
+
+        obstacle_timer = 0
+        obstacle_interval = random.randint(60, 150)
+
+        day_night_transition = 0
+        current_mode_is_night = False
+
+        while not game_over:
+            CLOCK.tick(60)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        dino.jump()
+
+            mode_is_night = ((score // 4000) % 2 == 1)
+
+            if mode_is_night != current_mode_is_night:
+                if day_night_transition < 1:
+                    day_night_transition += 0.02
+                else:
+                    current_mode_is_night = mode_is_night
+                    day_night_transition = 0
+            else:
+                day_night_transition = 0
+
+            if mode_is_night == current_mode_is_night:
+                blend = 1 if mode_is_night else 0
+            else:
+                if current_mode_is_night:
+                    blend = 1 - day_night_transition
+                else:
+                    blend = day_night_transition
+
+            current_speed = base_speed + speed_increment * score
+            if current_speed > 20:
+                current_speed = 20
+
+            background.speed = current_speed
+            background.update()
+            background.draw(SCREEN, blend)
+
+            dino.update()
+            dino.draw(SCREEN, inverted=blend > 0.5)
+
+            obstacle_timer += 1
+            if obstacle_timer > obstacle_interval:
+                obstacles.append(CactusSmall(current_speed))
+                obstacle_timer = 0
+                obstacle_interval = random.randint(60, 150)
+
+            for obstacle in list(obstacles):
+                obstacle.speed = current_speed
+                obstacle.update()
+                obstacle.draw(SCREEN, inverted=blend > 0.5)
+                if obstacle.off_screen():
+                    obstacles.remove(obstacle)
+                if dino.rect.colliderect(obstacle.rect):
+                    game_over = True
+
+            sun_alpha = int(255 * (1 - blend))
+            moon_alpha = int(255 * blend)
+            draw_sun(SCREEN, sun_alpha)
+            draw_moon(SCREEN, moon_alpha)
+
+            score_text_color = lerp_color(BLACK, WHITE, blend)
+
+            # 점수를 7자리로 0으로 채워서 출력
+            score_str = f"Score: {score:07d}"
+
+            # 폰트 크기를 더 작게 설정 (예: 28)
+            small_font = pygame.font.SysFont(None, 28)
+            score_text = small_font.render(score_str, True, score_text_color)
+            SCREEN.blit(score_text, (10, 10))
+
+
+            pygame.display.flip()
+            score += 1
+
+        # 게임오버 순간 화면 캡처
+        game_over_surface = SCREEN.copy()
+
+        if score > high_score:
+            high_score = score
+            save_high_score(high_score)
+
+        waiting = True
+        pressed = None
+
+        # 캡처한 화면을 game_over_screen 함수에 넘기기 (함수 수정 필요)
+        restart_rect, quit_rect = game_over_screen(SCREEN, font, score, high_score, 
+                                                   background_surface=game_over_surface,
+                                                   inverted=blend > 0.5)
+
+        while waiting:
+            CLOCK.tick(30)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                    running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # 왼쪽 클릭
+                        if restart_rect.collidepoint(event.pos):
+                            pressed = "restart"
+                        elif quit_rect.collidepoint(event.pos):
+                            pressed = "quit"
+                if event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        if pressed == "restart" and restart_rect.collidepoint(event.pos):
+                            waiting = False  # 게임 재시작
+                        elif pressed == "quit" and quit_rect.collidepoint(event.pos):
+                            waiting = False
+                            running = False  # 게임 종료
+                        pressed = None
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        waiting = False
+                        pressed = None
+                    elif event.key == pygame.K_ESCAPE:
+                        waiting = False
+                        running = False
+
+            restart_rect, quit_rect = game_over_screen(SCREEN, font, score, high_score, 
+                                                       background_surface=game_over_surface,
+                                                       inverted=blend > 0.5, 
+                                                       pressed_button=pressed)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
