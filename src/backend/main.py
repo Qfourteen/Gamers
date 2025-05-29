@@ -286,3 +286,14 @@ async def admin_openapi(request: Request):
     """
     await check_admin_user(request)
     return JSONResponse(app.openapi())
+
+
+@app.get("/robots.txt", response_class=HTMLResponse)
+async def robots_txt():
+    """
+    모든 경로의 접근을 허용하는 robots.txt를 반환합니다.
+    """
+    content = """User-agent: *
+Allow: /
+"""
+    return content
