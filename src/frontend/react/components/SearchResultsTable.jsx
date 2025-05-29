@@ -46,7 +46,6 @@ function SearchResultsTable({ data }) {
                           key={tagIdx}
                           bg="dark"
                           className="d-flex align-items-center"
-                          onClick={() => window.open(`/tag/${tag}`, '_blank')}
                           style={{ cursor: 'pointer' }}
                         >
                           <FaTag className="me-1" size={10} />

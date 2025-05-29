@@ -1,15 +1,16 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Tuple
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Request, HTTPException, status
+import base64
 
 from src.backend.models.user import User
 from src.backend.env import SECRET_KEY
 
 COOKIE_NAME = "auth_token"  # 인증 쿠키 이름
-TOKEN_EXPIRE_SECONDS = 18000  # 5시간
+TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 30 # 30일
 
 # 패스워드 해싱 및 인증 설정
 ph = PasswordHasher()
@@ -162,6 +163,39 @@ async def get_current_user(request: Request) -> User:
         )
 
     return user
+
+
+def parse_basic_auth_header(request: Request) -> Tuple[str, str]:
+    """
+    Authorization 헤더에서 Basic 인증 정보를 추출하고 UTF-8 디코딩합니다.
+    
+    Args:
+        request: HTTP 요청 객체
+        
+    Returns:
+        (username, password) 튜플
+        
+    Raises:
+        HTTPException: 인증 헤더가 없거나 올바르지 않은 경우
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Basic "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header",
+        )
+    
+    try:
+        encoded_credentials = auth_header.split("Basic ")[1]
+        decoded_bytes = base64.b64decode(encoded_credentials)
+        decoded_str = decoded_bytes.decode('utf-8')
+        username, password = decoded_str.split(":", 1)
+        return username, password
+    except (ValueError, UnicodeDecodeError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials format",
+        )
 
 
 async def check_admin_permissions(user: User):

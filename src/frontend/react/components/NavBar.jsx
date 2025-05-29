@@ -86,8 +86,11 @@ function NavBar() {
   const handleLogin = async (username, password) => {
     try {
       // HTTP Basic Auth에 필요한 인코딩 (username:password를 base64로 인코딩)
-      const credentials = btoa(`${username}:${password}`);
-      
+      // UTF-8 문자열을 안전하게 base64로 인코딩
+      const credentials = btoa(
+        encodeURIComponent(`${username}:${password}`)
+          .replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode(parseInt(p1, 16)))
+      );
       const response = await fetch('/auth/login', {
         method: 'POST',
         headers: {

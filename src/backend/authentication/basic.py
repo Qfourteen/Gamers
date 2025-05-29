@@ -15,7 +15,7 @@ from src.backend.schemas.authentication import UserResponse, UserCreate, Account
 from . import (
     COOKIE_NAME, TOKEN_EXPIRE_SECONDS,
     get_user, authenticate_user, create_access_token, get_current_user,
-    hash_password, verify_token
+    hash_password, verify_token, parse_basic_auth_header
 )
 
 # HTTP 기본 인증 설정
@@ -23,12 +23,12 @@ security = HTTPBasic()
 basic_router = APIRouter()
 
 @basic_router.post("/login")
-async def login(credentials: HTTPBasicCredentials = Depends(security), response: Response = None):
+async def login(request: Request, response: Response):
     """
     사용자 이름과 비밀번호를 사용하여 로그인하고 인증 쿠키를 설정합니다.
     
     Args:
-        credentials: HTTP Basic 인증 정보(사용자 이름과 비밀번호)
+        request: HTTP 요청 객체
         response: FastAPI 응답 객체
         
     Returns:
@@ -37,7 +37,11 @@ async def login(credentials: HTTPBasicCredentials = Depends(security), response:
     Raises:
         HTTPException: 인증 정보가 올바르지 않은 경우
     """
-    user = await authenticate_user(credentials.username, credentials.password)
+
+    # Authorization 헤더에서 Basic 인증 정보 추출 및 UTF-8 디코딩
+    username, password = parse_basic_auth_header(request)
+
+    user = await authenticate_user(username, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

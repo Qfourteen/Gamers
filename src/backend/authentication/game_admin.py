@@ -280,26 +280,26 @@ async def update_card(
     """
     current_user = await get_current_user(request)
     await check_admin_permissions(current_user)
-    
+
     card = await Card.get(card_id)
     if not card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Card not found"
         )
-    
+
     # 업데이트할 필드만 갱신
     update_data = card_data.dict(exclude_unset=True)
     if update_data:
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         await card.update({"$set": update_data})
-    
-    # 갱신된 카드 조회
-    card = await Card.get(card_id)
-    
+
+    # 갱신된 카드와 링크된 게임 정보까지 다시 조회
+    card = await Card.get(card_id, fetch_links=True)
+
     return CardResponse(
         id=str(card.id),
-        game_id=str(card.game_id.id),
+        game_id=str(card.game_id.id),  # 또는 필요하면 card.game_id.name 등
         card_body=card.card_body,
         image_base64=card.image_base64,
         card_title=card.card_title,
@@ -307,6 +307,7 @@ async def update_card(
         updated_at=card.updated_at,
         created_by=card.created_by
     )
+
 
 @api_game_router.delete("/cards/{card_id}", response_model=dict)
 async def delete_card(
