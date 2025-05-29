@@ -54,7 +54,7 @@ def is_valid_nickname(text):
         bool: 유효한 닉네임이면 True, 아니면 False
     """
     # 길이 조건
-    if len(text) <= 3 or len(text) > 100:
+    if len(text) < 3 or len(text) > 100:
         return False
     filtered = filter_nickname_characters(text)
     # 필터링 결과가 비었거나, 필터링 전후가 다르면 유효하지 않다고 판단
@@ -86,7 +86,7 @@ def get_nickname_validation_rules():
     """
     return {
         "rules": [
-            "ID는 4글자 이상, 100글자 이하여야 합니다.",
+            "ID는 3글자 이상, 100글자 이하여야 합니다.",
             "첫 글자는 반드시 문자(알파벳, 한글, 한자 등)여야 합니다.",
             "이후 글자는 문자, 숫자, 키보드 특수문자를 사용할 수 있습니다.",
             "이모지, 공백, 제어 문자는 사용할 수 없습니다."
