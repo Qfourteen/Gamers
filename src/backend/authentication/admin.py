@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import math
 import os
+from pathlib import Path
 
 from src.backend.models.user import User
 
@@ -15,9 +16,11 @@ from . import (
     get_user, get_current_user, check_admin_permissions, COOKIE_NAME
 )
 
+# 프로젝트 루트 디렉토리 경로
+BASE_DIR = Path(__file__).parent.parent.parent.parent
+
 # 템플릿 디렉토리 설정
-templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "templates")
-templates = Jinja2Templates(directory=templates_dir)
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 admin_router = APIRouter(prefix="/admin")
 

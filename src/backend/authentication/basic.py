@@ -194,7 +194,7 @@ async def deactivate_account(
         )
 
     # 점수 삭제: 현재 사용자와 연결된 Score 문서 모두 제거
-    await Score.find({"user_id.$id": ObjectId(current_user.id)}).delete_many()
+    await Score.find(Score.user_id.id == current_user.id).delete_many()
 
     # 계정 비활성화
     current_user.disabled = True

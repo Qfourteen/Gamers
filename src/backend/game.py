@@ -3,6 +3,7 @@ from starlette.responses import FileResponse
 from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
+from pathlib import Path
 
 from src.backend.models.game import Game, Score
 from src.backend.models.user import User
@@ -11,28 +12,31 @@ from src.backend.authentication import get_current_user
 
 from beanie.operators import And
 
+# 프로젝트 루트 디렉토리 경로
+BASE_DIR = Path(__file__).parent.parent.parent
+
 game_router = APIRouter()
 
 @game_router.get("/1944")
 async def nineteenfourtyfour():
-    return FileResponse("./static/game/1944.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "game" / "1944.html"))
 
 @game_router.get("/endlessjump")
 async def endless_jump():
-    return FileResponse("./static/game/endlessjump.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "game" / "endlessjump.html"))
 
 @game_router.get("/no-more-floor")
 async def no_more_floor():
-    return FileResponse("./static/game/TJ.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "game" / "TJ.html"))
 
 @game_router.get("/tlgus")
 async def dino_boo():
-    return FileResponse("./static/game/tlgus.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "game" / "tlgus.html"))
 
 
 @game_router.get("/leesangyeon")
 async def i_wanna_be_the_jumpmap():
-    return FileResponse("./static/game/leesangyeon.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "game" / "leesangyeon.html"))
 
 
 @game_router.post("/api/scores", response_model=ScoreResponse)

@@ -5,6 +5,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from bson import ObjectId
 import os
+from pathlib import Path
 
 from src.backend.models.game import Game, Card, Score
 from src.backend.schemas.game_list import (
@@ -19,9 +20,11 @@ from . import (
 admin_game_router = APIRouter(prefix="/admin/games")
 api_game_router = APIRouter(prefix="/api/admin/games")
 
+# 프로젝트 루트 디렉토리 경로
+BASE_DIR = Path(__file__).parent.parent.parent.parent
+
 # 템플릿 디렉토리 설정
-templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "templates")
-templates = Jinja2Templates(directory=templates_dir)
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Game CRUD API Endpoints
 @api_game_router.post("", response_model=GameResponse)

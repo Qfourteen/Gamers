@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from difflib import SequenceMatcher
 from typing import List
+from pathlib import Path
 
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -24,6 +25,9 @@ from src.backend.utility.password_utils import is_valid_password, get_password_s
 
 from src.backend.env import *
 from src.backend.generate_dummy import get_data_card, get_data_search
+
+# 프로젝트 루트 디렉토리 경로
+BASE_DIR = Path(__file__).parent.parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,21 +54,21 @@ app.include_router(api_game_router, tags=["admin-games-api"])
 app.include_router(game_router, prefix="/games", tags=["game-list"])
 
 # 정적 파일 서빙: 프론트엔드 빌드 결과물을 사용
-app.mount("/static", StaticFiles(directory="./static"), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "src" / "backend" / "static")), name="static")
 
-templates = Jinja2Templates(directory="./templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return FileResponse("./static/react/index.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "react" / "index.html"))
 
 @app.get("/introduce", response_class=HTMLResponse)
 async def introduce(request: Request):
-    return FileResponse("./static/introduce.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "introduce.html"))
 
 @app.get("/policy", response_class=HTMLResponse)
 async def policy(request: Request):
-    return FileResponse("./static/policy.html")
+    return FileResponse(str(BASE_DIR / "src" / "backend" / "static" / "policy.html"))
 
 
 def similarity(a: str, b: str) -> float:
@@ -286,6 +290,20 @@ async def admin_openapi(request: Request):
     """
     await check_admin_user(request)
     return JSONResponse(app.openapi())
+
+
+@app.get("/{game_id}")
+async def redirect_to_game(game_id: str):
+    """
+    게임 ID로 접속 시 해당 게임의 URL로 영구 리다이렉트합니다.
+    """
+    try:
+        game = await Game.get(game_id)
+        if not game:
+            raise HTTPException(status_code=404, detail="게임을 찾을 수 없습니다")
+        return RedirectResponse(url=game.url, status_code=301)
+    except Exception:
+        raise HTTPException(status_code=404, detail="게임을 찾을 수 없습니다")
 
 
 @app.get("/robots.txt", response_class=HTMLResponse)
