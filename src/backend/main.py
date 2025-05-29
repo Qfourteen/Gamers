@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from difflib import SequenceMatcher
 from typing import List
 
 from beanie import init_beanie
@@ -65,25 +66,119 @@ async def introduce(request: Request):
 async def policy(request: Request):
     return FileResponse("./static/policy.html")
 
+
+def similarity(a: str, b: str) -> float:
+    """두 문자열의 유사도를 계산합니다 (0.0 ~ 1.0)"""
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+def korean_similarity_search(text: str, query: str) -> float:
+    """한국어 텍스트에서 쿼리와의 유사도를 계산합니다"""
+    if not text or not query:
+        return 0.0
+
+    # 완전 일치 검사
+    if query in text:
+        return 1.0
+
+    # 부분 문자열 유사도 검사
+    max_similarity = 0.0
+    words = text.split()
+
+    for word in words:
+        sim = similarity(word, query)
+        max_similarity = max(max_similarity, sim)
+
+    # 전체 텍스트 유사도도 고려
+    full_sim = similarity(text, query)
+
+    return max(max_similarity, full_sim)
+
 @app.get("/data/search", response_model=List[SearchResult])
-async def search_data(request: Request):
+async def search_data(request: Request, q: str = ""):
     """
-    TODO: 카드 가져오는 올바른 로직이 필요함.
+    한국어 유사도 기반 게임 검색을 수행합니다.
     :param request:
+    :param q: 검색 쿼리
     :return:
     """
-    result = get_data_search()
+    if not q.strip():
+        return []
+
+    if len(q) > 100:
+        return []
+
+    games = await Game.find_all().to_list()
+    search_results = []
+    
+    for game in games:
+        # 이름, 짧은 설명, 설명, 태그에서 검색
+        name_score = korean_similarity_search(game.name, q)
+        short_desc_score = korean_similarity_search(game.short_description, q)
+        desc_score = korean_similarity_search(game.description, q)
+        
+        # 태그 검색
+        tag_score = 0.0
+        for tag in game.tags:
+            tag_sim = korean_similarity_search(tag, q)
+            tag_score = max(tag_score, tag_sim)
+        
+        # 최종 점수 계산 (가중치 적용)
+        final_score = max(
+            name_score * 1.5,  # 이름은 가중치 높게
+            short_desc_score * 1.2,
+            desc_score,
+            tag_score * 1.3  # 태그도 가중치 높게
+        )
+        
+        # 유사도 임계값 (0.3 이상)
+        if final_score >= 0.3:
+            search_results.append({
+                'game': game,
+                'score': final_score
+            })
+    
+    # 점수 순으로 정렬
+    search_results.sort(key=lambda x: x['score'], reverse=True)
+    
+    # SearchResult 객체로 변환
+    result = []
+    for item in search_results:
+        game = item['game']
+        result.append(SearchResult(
+            name=game.name,
+            short_description=game.short_description,
+            tags=game.tags,
+            game_id=str(game.id)
+        ))
+    
     return result
 
 
 @app.get("/data/card", response_model=List[CardResult])
 async def card_data(request: Request):
     """
-    TODO: 카드 가져오는 올바른 로직이 필요함.
+    카드 데이터 4개를 랜덤으로 가져옵니다.
     :param request:
     :return:
     """
-    result = get_data_card()
+    import random
+    
+    cards = await Card.find_all().to_list()
+    if len(cards) >= 4:
+        random_cards = random.sample(cards, 4)
+    else:
+        random_cards = cards
+    
+    result = []
+    for card in random_cards:
+        game = await card.game_id.fetch()
+        result.append(CardResult(
+            name=game.name,
+            image_base64=card.image_base64,
+            card_title=card.card_title,
+            game_id=str(card.game_id.ref.id)
+        ))
+    
     return result
 
 
