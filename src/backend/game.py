@@ -30,6 +30,11 @@ async def dino_boo():
     return FileResponse("./static/game/tlgus.html")
 
 
+@game_router.get("/leesangyeon")
+async def i_wanna_be_the_jumpmap():
+    return FileResponse("./static/game/leesangyeon.html")
+
+
 @game_router.post("/api/scores", response_model=ScoreResponse)
 async def create_score(
     score_data: ScoreCreate,

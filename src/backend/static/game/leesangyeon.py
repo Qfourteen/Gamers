@@ -1,0 +1,628 @@
+import pygame
+import copy
+import asyncio
+
+
+class World:
+    def __init__(self, tilemaps, tile_images, tile_size):
+        self.tilemaps = tilemaps
+        self.spike_rects = []  # 정적 가시 타일 충돌 영역
+        self.moving_spike_rects = []  # 동적 가시 타일 충돌 영역
+        self.moving_tile_direction = 1
+        self.moving_tile_offsets = {}  # 동적 타일 위치 고정
+        self.last_save_point = None  # 예: (map_index, x, y)
+        self.current_map_index = 1
+        self.tile_images = tile_images
+        self.tile_size = tile_size
+        self.moving_tile_positions_per_map = {
+            0: [],
+            1: [],  # 맵 0에서 움직이는 타일 좌표 리스트
+            2: [[(3, 23), (25, 29)],
+                [(3, 17), (5, 17)],
+                [(11, 21), (11, 22)],
+                [(13, 21), (13, 22)],
+                [(3, 3), (26, 5)],  # 3 ~ 5 까지 이동
+                [(3, 7), (26, 17)],  # 7 ~ 17 까지 이동
+                [(6, 18), (10, 18)],
+                [(7, 19), (9, 19)],
+                [(14, 18), (18, 18)],
+                [(15, 19), (17, 19)],
+                [(22, 18), (26, 18)],
+                [(23, 19), (25, 19)]],  # 맵 1에서 움직이는 타일 좌표 리스트
+            # 필요한 만큼 추가
+        }
+        self.save_points_per_map = {
+            0: [],
+            1: [(4, 1), (41, 3), (17, 24)],
+            2: [],
+        }
+        self.finish_points_per_map = {
+            0: [(1, 28)],
+            1: [],
+            2: [],
+        }
+        self.load_map(self.tilemaps[self.current_map_index])
+
+        # 움직이는 타일 관련 변수들
+        self.moving_tile_velocity = pygame.Vector2(0, -2)
+        self.moving_tile_range = 256
+        self.moving_tile_total_moved = 0
+
+    def load_map(self, tilemap):
+        self.tilemap = copy.deepcopy(tilemap)
+
+        self.spike_rects = []
+        self.moving_spike_rects = []
+
+        area_list = self.moving_tile_positions_per_map.get(self.current_map_index, [])
+        self.moving_tiles_in_area(area_list)
+
+        moving_area_coords = set()
+        for start_pos, end_pos in area_list:
+            x_start, y_start = start_pos
+            x_end, y_end = end_pos
+            for y in range(y_start, y_end + 1):
+                for x in range(x_start, x_end + 1):
+                    moving_area_coords.add((x, y))
+
+        for y, row in enumerate(tilemap):
+            for x, tile in enumerate(row):
+
+                if tile in [3, 4, 5, 6]:
+                    if (x, y) in moving_area_coords:
+                        continue
+
+                    tile_x = x * self.tile_size
+                    tile_y = y * self.tile_size
+                    if tile == 3:  # 위쪽 가시
+                        spike_rect = pygame.Rect(tile_x + 8, tile_y + 8, self.tile_size - 16, 14)
+                    elif tile == 4:  # 아래쪽 가시
+                        spike_rect = pygame.Rect(tile_x + 8, tile_y + self.tile_size - 16, self.tile_size - 16, 14)
+                    elif tile == 5:  # 왼쪽 가시
+                        spike_rect = pygame.Rect(tile_x, tile_y + 4, 14, self.tile_size - 8)
+                    elif tile == 6:  # 오른쪽 가시
+                        spike_rect = pygame.Rect(tile_x + self.tile_size - 10, tile_y + 4, 10, self.tile_size - 8)
+                    self.spike_rects.append(spike_rect)
+        self.moving_tile_total_moved = 0
+        self.moving_tile_direction = 1
+
+    def next_map(self):
+        if self.current_map_index + 1 < len(self.tilemaps):
+            self.current_map_index += 1
+            self.load_map(self.tilemaps[self.current_map_index])
+            return True
+        return False
+
+    def prev_map(self):
+        if self.current_map_index - 1 >= 0:
+            self.current_map_index -= 1
+            self.load_map(self.tilemaps[self.current_map_index])
+            return True
+        return False
+
+    def check_tile_collision(self, rect, dx=0, dy=0):
+        for y, row in enumerate(self.tilemap):
+            for x, tile in enumerate(row):
+                if tile not in (1, 2):
+                    continue
+                tile_rect = pygame.Rect(x * self.tile_size, y * self.tile_size, self.tile_size, self.tile_size)
+                if rect.move(dx, dy).colliderect(tile_rect):
+                    return tile_rect
+
+        for tile_rect, tile_value in self.moving_tiles:
+            if tile_value not in (1, 2):
+                continue
+            if rect.move(dx, dy).colliderect(tile_rect):
+                return tile_rect
+        return None
+
+    def check_spike_collision(self, rect):
+        # 가시 타일 체크
+        for spike_rect in self.spike_rects + self.moving_spike_rects:
+            if rect.colliderect(spike_rect):
+                return True
+        return False
+
+    def moving_tiles_in_area(self, area_list):
+        self.moving_tiles = []
+        self.moving_spike_rects = []
+
+        for start_pos, end_pos in area_list:
+            x_start, y_start = start_pos
+            x_end, y_end = end_pos
+
+            for y in range(y_start, y_end + 1):
+                for x in range(x_start, x_end + 1):
+                    tile_value = self.tilemap[y][x]
+                    if tile_value == 0:
+                        continue
+                    tile_rect = pygame.Rect(
+                        x * self.tile_size, y * self.tile_size,
+                        self.tile_size, self.tile_size
+                    )
+                    self.moving_tiles.append((tile_rect, tile_value))
+
+                    self.tilemap[y][x] = 0
+                    # 가시 타일이라면 moving_spike_rects에도 추가
+                    if tile_value in [3, 4, 5, 6]:
+                        spike_rect = None
+                        if tile_value == 3:  # 위쪽 가시
+                            spike_rect = pygame.Rect(tile_rect.x + 8, tile_rect.y + 8, self.tile_size - 16, 14)
+                        elif tile_value == 4:  # 아래쪽 가시
+                            spike_rect = pygame.Rect(tile_rect.x + 8, tile_rect.y + self.tile_size - 16,
+                                                     self.tile_size - 16, 14)
+                        elif tile_value == 5:  # 왼쪽 가시
+                            spike_rect = pygame.Rect(tile_rect.x, tile_rect.y + 4, 14, self.tile_size - 8)
+                        elif tile_value == 6:  # 오른쪽 가시
+                            spike_rect = pygame.Rect(tile_rect.x + self.tile_size - 10, tile_rect.y + 4, 10,
+                                                     self.tile_size - 8)
+                        if spike_rect:
+                            self.moving_spike_rects.append(spike_rect)
+
+    def update_moving_tiles(self):
+        self.moving_spike_rects = []
+        for i, (tile_rect, tile_value) in enumerate(self.moving_tiles):
+            tile_rect.x += self.moving_tile_velocity.x * self.moving_tile_direction
+            tile_rect.y += self.moving_tile_velocity.y * self.moving_tile_direction
+            # 만약 튜플로 저장돼 있어서 직접 변경이 안 된다면,
+            # 리스트에 다시 저장해주어야 함
+            self.moving_tiles[i] = (tile_rect, tile_value)
+
+            # 가시인 경우에만 spike_rect 생성
+            if tile_value == 3:  # 위쪽 가시
+                spike_rect = pygame.Rect(tile_rect.x + 8, tile_rect.y + 8, self.tile_size - 16, 14)
+                self.moving_spike_rects.append(spike_rect)
+            elif tile_value == 4:  # 아래쪽 가시
+                spike_rect = pygame.Rect(tile_rect.x + 8, tile_rect.y + self.tile_size - 16, self.tile_size - 16, 14)
+                self.moving_spike_rects.append(spike_rect)
+            elif tile_value == 5:  # 왼쪽 가시
+                spike_rect = pygame.Rect(tile_rect.x, tile_rect.y + 4, 14, self.tile_size - 8)
+                self.moving_spike_rects.append(spike_rect)
+            elif tile_value == 6:  # 오른쪽 가시
+                spike_rect = pygame.Rect(tile_rect.x + self.tile_size - 10, tile_rect.y + 4, 10, self.tile_size - 8)
+                self.moving_spike_rects.append(spike_rect)
+
+        self.moving_tile_total_moved += abs(self.moving_tile_velocity.x) + abs(self.moving_tile_velocity.y)
+
+        if self.moving_tile_total_moved >= self.moving_tile_range:
+            self.moving_tile_direction *= -1
+            self.moving_tile_total_moved = 0
+
+    def draw(self, surface):
+        for y, row in enumerate(self.tilemap):
+            for x, tile in enumerate(row):
+                if tile == 0:
+                    continue
+                surface.blit(self.tile_images[tile], (x * self.tile_size, y * self.tile_size))
+
+    def draw_moving_tiles(self, surface):
+        for tile_rect, tile_value in self.moving_tiles:  # 튜플 언패킹
+            if tile_value == 0:
+                continue
+            tile_img = self.tile_images[tile_value]
+            surface.blit(tile_img, tile_rect.topleft)
+
+    def check_save_point_collision(self, player):
+        player_rect = player if isinstance(player, pygame.Rect) else player.rect
+        for y, row in enumerate(self.tilemap):
+            for x, tile in enumerate(row):
+                if tile == 7:
+                    tile_rect = pygame.Rect(x * self.tile_size, y * self.tile_size, self.tile_size, self.tile_size)
+                    if player_rect.colliderect(tile_rect):
+                        self.last_save_point = (self.current_map_index, x * self.tile_size, y * self.tile_size)
+                        return x * self.tile_size, y * self.tile_size
+        return None
+
+    def get_current_save_point(self):
+        return self.last_save_point
+
+    def check_finish_point_collision(self, player):
+        for point in self.finish_points_per_map.get(self.current_map_index, []):
+            tile_x, tile_y = point
+            tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            if player.colliderect(tile_rect):
+                return True
+        return False
+
+
+# 초기화
+pygame.init()
+pygame.mixer.init()
+screen = pygame.display.set_mode((1440, 960))
+clock = pygame.time.Clock()
+
+player_image = pygame.image.load("player_image.png").convert_alpha()
+player_image = pygame.transform.scale(player_image, (20, 20))
+
+pygame.mixer.music.load("bgm.wav")
+pygame.mixer.music.play(-1)
+
+TILE_SIZE = 32
+
+# 점검용 x, y 좌표
+# x, y = 32 * 7, 960 - 32 * 15
+# x, y = 32 * 3 , 32 * 2
+x, y = 32 * 3, 960 - 32 * 4
+width, height = 10, 10
+speed = 4.5
+
+y_vel = 0  # y축 속도
+gravity = 0.6  # 값이 클수록 빨리 낙하
+jump_power = -10  # 값이 작을수록 높이 점프
+jump_release_damping = 0.5  # 스페이스바를 조금만 누르면 약하게 점프함
+jump_count = 0  # 점프 횟수 체크
+max_jumps = 2
+
+player = pygame.Rect(x, y, 20, 20)
+
+saved_map_index = None
+reset_x = 32 * 4
+reset_y = 32 * 4
+
+last_saved_point = None
+save_point_msg_timer = 0  # 메시지를 몇 프레임 동안 보여줄지 타이머
+SAVE_POINT_MSG_DURATION = 90  # 약 1.5초 (30fps 기준)
+
+font1 = pygame.font.Font("./NotoSansKR-Regular.ttf", 36)
+font2 = pygame.font.Font("./NotoSansKR-Regular.ttf", 60)
+font3 = pygame.font.Font("./NotoSansKR-Regular.ttf", 20)
+death_count = 0
+
+# 배경 이미지 불러오기
+background = pygame.image.load("coastal_landscape.png")  # 이미지 경로에 맞게 수정
+background = pygame.transform.scale(background, (1440, 960))  # 화면 크기에 맞게 조절
+
+# 타일 이미지 불러오기
+tile_images = {
+    1: pygame.image.load("ground_image_gpt.png"),
+    2: pygame.image.load("ground_inner_image_gpt.png"),
+    3: pygame.image.load("bottom_spike.png"),
+    4: pygame.image.load("top_spike.png"),
+    5: pygame.image.load("left_spike.png"),
+    6: pygame.image.load("right_spike.png"),
+    7: pygame.image.load("savepoint_image.png"),
+    8: pygame.image.load("finish_point_image.png")
+}
+
+# 간단한 타일 맵
+tilemap0 = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [6, 8, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+     3, 3, 3, 3, 3, 3, 3],
+]
+tilemap1 = [
+    [0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+     1, 1, 1, 1, 1, 1, 1],
+    [2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 0, 0, 5, 2, 0, 0,
+     0, 0, 0, 7, 0, 0, 0],
+    [2, 2, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 6, 0, 0, 0, 0, 0, 5, 2, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [2, 4, 0, 2, 0, 0, 4, 0, 0, 0, 2, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 1, 1, 0, 0, 5, 2, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [2, 0, 0, 2, 0, 1, 0, 0, 1, 0, 4, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 1, 1,
+     6, 0, 0, 1, 1, 0, 0],
+    [2, 0, 1, 2, 6, 0, 0, 1, 6, 0, 0, 2, 6, 0, 0, 0, 5, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 2, 6,
+     0, 0, 1, 2, 2, 0, 0],
+    [2, 0, 4, 2, 6, 0, 0, 0, 0, 1, 0, 2, 2, 6, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 0, 0, 0, 5, 2, 6, 0,
+     0, 1, 2, 2, 2, 0, 0],
+    [2, 0, 0, 2, 0, 0, 1, 0, 5, 0, 0, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 1, 0, 0, 5, 2, 0, 0,
+     1, 2, 2, 2, 2, 0, 0],
+    [2, 1, 0, 2, 0, 0, 4, 0, 0, 0, 0, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 0, 1,
+     2, 2, 2, 2, 2, 0, 0],
+    [2, 4, 0, 2, 0, 0, 0, 0, 0, 0, 1, 2, 6, 0, 0, 5, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 0, 0,
+     5, 2, 2, 2, 2, 0, 0],
+    [2, 0, 0, 2, 1, 0, 0, 0, 1, 0, 0, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 0, 0, 0, 5, 2, 1, 0,
+     0, 5, 2, 2, 2, 0, 0],
+    [2, 0, 1, 2, 0, 0, 3, 0, 4, 0, 0, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 6, 0, 2, 1, 0, 0, 5, 2, 2, 1,
+     0, 0, 5, 2, 2, 0, 0],
+    [2, 0, 4, 2, 0, 1, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 2, 2,
+     1, 0, 0, 5, 2, 0, 0],
+    [2, 0, 0, 2, 6, 0, 0, 0, 0, 1, 5, 2, 6, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 2, 2,
+     2, 1, 0, 0, 2, 0, 0],
+    [2, 1, 0, 2, 0, 0, 1, 6, 1, 0, 0, 2, 2, 6, 0, 0, 5, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 6, 0, 2, 0, 0, 0, 5, 2, 2, 2,
+     2, 2, 1, 0, 2, 0, 0],
+    [2, 4, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 6, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 1, 0, 0, 5, 2, 2, 2,
+     2, 6, 0, 0, 2, 0, 0],
+    [2, 0, 0, 2, 1, 0, 0, 0, 0, 0, 4, 2, 2, 6, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 2, 6, 0, 0, 5, 2, 2, 2,
+     6, 0, 0, 1, 2, 0, 0],
+    [2, 0, 1, 2, 2, 1, 1, 1, 1, 0, 0, 2, 2, 6, 0, 0, 5, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 5, 2, 2, 6,
+     0, 0, 1, 0, 0, 0, 0],
+    [2, 0, 0, 0, 4, 0, 0, 0, 4, 1, 0, 4, 2, 6, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 5, 2, 6, 0,
+     0, 1, 0, 0, 0, 0, 0],
+    [2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 5, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0,
+     1, 0, 0, 0, 0, 0, 0],
+    [2, 2, 3, 0, 0, 0, 3, 0, 0, 0, 0, 0, 2, 6, 0, 5, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1,
+     0, 0, 0, 0, 1, 1, 1],
+    [2, 2, 1, 1, 1, 1, 2, 1, 6, 0, 0, 1, 2, 6, 0, 0, 5, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 3, 3, 2, 3, 3, 3, 1, 1, 1, 0,
+     0, 0, 0, 1, 2, 2, 2],
+    [2, 0, 0, 0, 0, 0, 4, 0, 0, 0, 5, 2, 6, 0, 0, 0, 5, 7, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0,
+     0, 0, 1, 2, 2, 2, 2],
+    [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 6, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0,
+     0, 1, 2, 2, 2, 2, 2],
+    [2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 5, 2, 6, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 1, 1, 3, 1, 3, 1, 3, 0, 0, 0, 0,
+     1, 2, 2, 2, 2, 2, 2],
+    [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 1, 1, 1,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+]
+
+tilemap2 = [
+    [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 0, 0, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 6,
+     1, 0, 0, 0, 0, 5, 1],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 4, 4, 4, 2, 2, 4, 4, 0, 0, 4, 4, 2, 2, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 1, 5, 2],
+    [0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 3, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     1, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 2, 0, 0, 4, 4, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 2, 3, 0, 0, 0, 0, 3, 2, 2, 3, 0, 0, 0, 0, 3, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 2, 2, 3, 0, 0, 3, 2, 2, 2, 2, 3, 0, 0, 3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 1, 5, 2],
+    [0, 0, 0, 2, 2, 2, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     0, 0, 0, 0, 0, 5, 2],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6,
+     1, 0, 0, 0, 0, 0, 2],
+    [0, 0, 0, 4, 4, 4, 2, 2, 2, 2, 2, 4, 4, 4, 2, 2, 2, 2, 2, 4, 4, 4, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 4, 2, 2, 2, 4, 0, 1, 0, 4, 2, 2, 2, 4, 0, 1, 0, 4, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     1, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+     2, 2, 2, 2, 2, 2, 2],
+    [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3, 2, 3, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 0, 0, 0, 0, 3, 3, 3, 0, 3, 0, 3, 0, 3, 3, 3, 0, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 0, 0, 0, 3, 2, 2, 2, 3, 2, 0, 2, 3, 2, 2, 2, 3, 0, 0, 0, 3, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 3, 3, 3, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+     2, 2, 2, 2, 2, 2, 2],
+]
+
+tile_maps = [tilemap0, tilemap1, tilemap2]
+
+
+def reset_player(x, y):
+    global death_count, y_vel, jump_count
+    player.x = x
+    player.y = y
+    y_vel = 0
+    jump_count = 0
+    death_count += 1
+
+    pygame.mixer.music.stop()
+    pygame.mixer.music.play(-1)
+
+
+# 메인 루프
+world = World(tile_maps, tile_images, TILE_SIZE)
+
+start_time = pygame.time.get_ticks()
+last_update_time = start_time
+elapsed_seconds = 0
+reset_x, reset_y = x, y
+
+async def main():
+    global elapsed_seconds, save_point_msg_timer, jump_count, last_saved_point, reset_x, reset_y, saved_map_index, y_vel
+    running = True
+    while running:
+        current_time = pygame.time.get_ticks()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE and jump_count < max_jumps:
+                    y_vel = jump_power
+                    jump_count += 1
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE and y_vel < 0:
+                    y_vel *= jump_release_damping  # 위로 튕기는 힘 감소
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            collision = world.check_tile_collision(player, -speed, 0)
+            if not collision:
+                player.x -= speed  # 충돌했으면 되돌림
+
+        if keys[pygame.K_RIGHT]:
+            collision = world.check_tile_collision(player, speed, 0)
+            if not collision:
+                player.x += speed  # 충돌했으면 되돌림
+
+        # 플레이어가 세이브포인트에 닿았는지 체크
+        save_pos = world.check_save_point_collision(player)
+        if save_pos:
+            if save_pos != last_saved_point:
+                last_saved_point = save_pos
+                save_point_msg_timer = SAVE_POINT_MSG_DURATION
+            saved_map_index = world.current_map_index
+            reset_x, reset_y = save_pos
+
+        # 사망 시 호출되는 위치
+        save_point = world.get_current_save_point()
+        if save_point:
+            saved_map_index, reset_x, reset_y = save_point
+
+        # 중력 적용
+        y_vel += gravity
+        player.y += y_vel
+
+        if world.check_spike_collision(player):
+            if reset_x is not None and reset_y is not None and saved_map_index is not None:
+                if world.current_map_index != saved_map_index:
+                    world.current_map_index = saved_map_index
+                    world.load_map(world.tilemaps[saved_map_index])  # 세이브된 맵으로 복귀
+
+            reset_player(reset_x, reset_y)
+            continue
+
+        # 피니시 포인트 충돌 체크
+        if world.check_finish_point_collision(player):
+            screen.fill((255, 255, 255))
+            text = font2.render(f"소요시간 : {elapsed_seconds}초", True, (0, 0, 0))
+            screen.blit(text, (400, 400))
+            pygame.display.flip()
+            pygame.time.wait(3000)
+            pygame.quit()
+
+
+        collision = world.check_tile_collision(player, 0, y_vel)
+        if collision:
+            if y_vel > 0:
+                player.bottom = collision.top
+                y_vel = 0
+                jump_count = 0
+            elif y_vel < 0:
+                player.top = collision.bottom
+                y_vel = 0
+
+        if player.right > 1440:
+            if world.next_map():
+                player.left = 64
+            else:
+                player.right = 1440
+
+        if player.left < 0:
+            if world.prev_map():
+                player.right = 1440
+            else:
+                player.left = 0
+
+        if not world.check_tile_collision(player, 0, 1):  # 아래에 땅이 없음 = 공중
+            if y_vel > 0:  # 낙하 중
+                jump_count = max(jump_count, 1)
+
+        screen.blit(background, (0, 0))  # 배경 이미지 그리기
+
+        # draw_map()
+        world.draw(screen)
+
+        world.update_moving_tiles()
+        world.draw_moving_tiles(screen)
+
+        screen.blit(player_image, player.topleft)
+
+        # 가시 충돌 범위 체크용 코드
+        # for spike_rect in world.spike_rects:
+        # pygame.draw.rect(screen, (255, 0, 0), spike_rect, 1)  # 빨간 테두리로 표시
+        # for spike_rect in world.moving_spike_rects:
+        # pygame.draw.rect(screen, (255, 0, 0), spike_rect, 1)
+
+        if save_point_msg_timer > 0:
+            save_point_msg_timer -= 1
+            msg = font3.render("Save!", True, (0, 0, 0))
+            save_x = player.x + TILE_SIZE
+            save_y = player.y - TILE_SIZE
+            screen.blit(msg, (save_x, save_y))
+
+        death = font1.render(f"death : {death_count}\n", True, (0, 0, 0))
+        screen.blit(death, (1000, 20))  # 화면 우측 상단에 표시
+
+        # 현재 시간과 시작 시간의 차이 (경과 시간)
+        if current_time - last_update_time >= 1000:
+            elapsed_seconds = (current_time - start_time) // 1000
+
+        time = font1.render(f"time : {elapsed_seconds}", True, (0, 0, 0))
+        screen.blit(time, (1000, 60))
+
+        pygame.display.flip()
+        clock.tick(60)
+        await asyncio.sleep(0.01)
+
+asyncio.ensure_future(main())
