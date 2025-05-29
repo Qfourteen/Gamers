@@ -9,7 +9,7 @@ from src.backend.models.user import User
 from src.backend.env import SECRET_KEY
 
 COOKIE_NAME = "auth_token"  # 인증 쿠키 이름
-TOKEN_EXPIRE_SECONDS = 18000  # 5시간
+TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 30 # 30일
 
 # 패스워드 해싱 및 인증 설정
 ph = PasswordHasher()
