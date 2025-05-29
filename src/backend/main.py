@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -16,6 +16,7 @@ from src.backend.models.user import User
 from src.backend.authentication.basic import basic_router
 from src.backend.authentication.admin import admin_router, api_router
 from src.backend.authentication.game_admin import admin_game_router, api_game_router
+from src.backend.authentication import get_current_user, check_admin_permissions
 from src.backend.game import game_router
 from src.backend.utility.nickname_utils import is_valid_nickname, get_nickname_validation_rules
 from src.backend.utility.password_utils import is_valid_password, get_password_strength, get_password_validation_rules
@@ -30,7 +31,12 @@ async def lifespan(app: FastAPI):
     yield
     client.close()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
 
 # 인증 라우터 추가
 app.include_router(basic_router, prefix="/auth", tags=["authentication"])
@@ -135,3 +141,53 @@ async def get_password_rules():
         dict: 비밀번호 생성 규칙
     """
     return get_password_validation_rules()
+
+
+async def check_admin_user(request: Request):
+    """
+    현재 사용자가 관리자인지 확인하는 헬퍼 함수
+    """
+    try:
+        user = await get_current_user(request)
+        await check_admin_permissions(user)
+        return user
+    except HTTPException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+
+@app.get("/docs", include_in_schema=False)
+async def admin_docs(request: Request):
+    """
+    관리자 전용 API 문서
+    """
+    await check_admin_user(request)
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title="Gamers API - Admin Documentation"
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+async def admin_redoc(request: Request):
+    """
+    관리자 전용 ReDoc 문서
+    """
+    await check_admin_user(request)
+    from fastapi.openapi.docs import get_redoc_html
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title="Gamers API - Admin Documentation"
+    )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+async def admin_openapi(request: Request):
+    """
+    관리자 전용 OpenAPI 스키마
+    """
+    await check_admin_user(request)
+    return JSONResponse(app.openapi())
