@@ -28,7 +28,7 @@ function SearchResultsTable({ data }) {
           </thead>
           <tbody>
             {data.map((row, idx) => (
-              <tr key={idx}>
+              <tr key={idx} onClick={() => window.open(`/${row.game_id}`, '_blank')}>
                 <td>
                     {row.name}
                     <FaExternalLinkAlt className="ms-1 text-muted" size={12} />
