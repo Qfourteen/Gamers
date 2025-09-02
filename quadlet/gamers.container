@@ -1,7 +1,7 @@
 [Unit]
 Description=Gamers FastAPI app container
-After=gamers.network gamers.pod mongodb.container
-Requires=gamers.network gamers.pod mongodb.container
+After=gamers.network gamers.pod gamers-mongodb.container
+Requires=gamers.network gamers.pod gamers-mongodb.container
 
 [Container]
 # Build this image locally first: podman build -t gamers:latest -f Containerfile .
