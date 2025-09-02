@@ -5,7 +5,7 @@ Requires=gamers.network gamers.pod gamers-mongodb-data.volume
 
 [Container]
 Image=docker.io/library/mongo:8
-Pod=amers-pod
+Pod=gamers-pod
 Volume=gamers-mongodb-data:/data/db:Z
 Environment=MONGO_INITDB_ROOT_USERNAME=admin
 Environment=MONGO_INITDB_ROOT_PASSWORD=adminpass
