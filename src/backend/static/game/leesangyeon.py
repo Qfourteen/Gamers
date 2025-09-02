@@ -560,6 +560,7 @@ async def main():
             pygame.display.flip()
             pygame.time.wait(3000)
             pygame.quit()
+            break
 
 
         collision = world.check_tile_collision(player, 0, y_vel)

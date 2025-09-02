@@ -7,13 +7,6 @@ import asyncio
 pygame.init()
 pygame.mixer.init()
 
-# 음악 및 효과음 로드
-pygame.mixer.music.load("./Intro_music.wav")
-earthquake_sound = pygame.mixer.Sound("./earthquake_sound.wav")
-falling_sound = pygame.mixer.Sound("./falling_sound.wav")
-jump_sound = pygame.mixer.Sound("./jumping_sound.wav")
-rocket_sound = pygame.mixer.Sound("./rocket_sound.wav")
-
 WIDTH, HEIGHT = 720, 480
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("No More Floor")
@@ -29,9 +22,9 @@ font_main = pygame.font.Font("./NotoSansKR-Regular.ttf", 28)
 font_intro = pygame.font.Font("./NotoSansKR-Regular.ttf", 20)
 
 tile_positions = [
-    (250, 100), (310, 100),
-    (210, 160), (270, 160), (330, 160),
-    (250, 220), (310, 220)
+    (300, 160), (360, 160),
+    (270, 220), (330, 220), (390, 220),
+    (300, 280), (360, 280)
 ]
 
 TILE_SIZE = 50
@@ -49,7 +42,6 @@ intro_image = pygame.image.load("./Game_Intro_Image.png").convert_alpha()
 async def intro_animation():
     duration = 5
     start_time = time.time()
-    pygame.mixer.music.play(-1)
     while True:
         elapsed = time.time() - start_time
         if elapsed > duration:
@@ -65,7 +57,6 @@ async def intro_animation():
         pygame.display.flip()
         clock.tick(60)
         await asyncio.sleep(0)
-    pygame.mixer.music.stop()
 
 tile_image = load_image("./dot_tile.png")
 background_image = load_image("./background2.png", (WIDTH, HEIGHT))
@@ -170,7 +161,7 @@ async def game_over(score):
     rankings = sorted(rankings, reverse=True)[:5]
 
     # Quit 버튼 영역
-    quit_rect = pygame.Rect((WIDTH // 2), HEIGHT - 80, 120, 50)
+    quit_rect = pygame.Rect((WIDTH // 2 - 80), HEIGHT - 80, 120, 50)
     waiting = True
     confirm_quit = False
 
@@ -181,12 +172,12 @@ async def game_over(score):
     while waiting:
         # 배경, 스프라이트 그리기
         screen.blit(background_image, (0, 0))
-        screen.blit(crying_sprite,    (0, 0))
+        screen.blit(crying_sprite,    (0, 80))
         mouse_pos = pygame.mouse.get_pos()
 
         # “Game Over” 텍스트
-        draw_text("Game Over!", 360,  50, RED,   font=font_intro)
-        draw_text(f"Score: {score}", 360, 90,       font=font_intro)
+        draw_text("Game Over!", 360,  120, RED,   font=font_intro)
+        draw_text(f"Score: {score}", 370, 160,       font=font_intro)
 
         # Quit 버튼
         pygame.draw.rect(
@@ -272,7 +263,6 @@ async def main():
         rocket_used = False
         alive = True
         flying = False
-        rocket_sound_played = False  # 게임 시작 시 False로 초기화
 
         while alive:
             removed_tiles = []
@@ -311,9 +301,6 @@ async def main():
                         rocket_used = True
                         flying = True
                         flying_timer = time.time()
-                        if not rocket_sound_played:
-                            rocket_sound.play()
-                            rocket_sound_played = True
                     elif event.type == pygame.MOUSEBUTTONDOWN:
                         pos = event.pos
                         for i, rect in enumerate(tiles):
@@ -343,7 +330,6 @@ async def main():
                 if character_pos == tiles[clicked_index].center:
                     current_sprite = "surprised"
                 else:
-                    jump_sound.play()
                     current_sprite = "jumping"
                     for i in range(10):
                         lerp_x = character_pos[0] + (tiles[clicked_index].centerx - character_pos[0]) * (i + 1) / 10
@@ -361,7 +347,6 @@ async def main():
                     current_sprite = "surprised"
 
             # 발판 흔들림 + 효과음
-            earthquake_sound.play()
             for i in range(45):
                 screen.blit(background_image, (0, 0))
                 shake_offset = draw_tiles(tiles, removed_tiles, highlight=clicked_index, animate_highlight=True, anim_progress=i)
@@ -376,14 +361,12 @@ async def main():
                 pygame.display.flip()
                 clock.tick(30)
                 await asyncio.sleep(0)
-            earthquake_sound.fadeout(30)
 
             all_indexes = list(range(len(tiles)))
             remove_count = 3 if random.random() < 0.85 else 4
             removed_this_turn = random.sample(all_indexes, remove_count)
 
             if clicked_index in removed_this_turn and not flying:
-                falling_sound.play()  # 떨어질 때 효과음
                 current_sprite = "falling"
                 for i in range(30):
                     screen.blit(background_image, (0, 0))
