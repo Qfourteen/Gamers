@@ -2,5 +2,4 @@
 Description=MongoDB data volume for Gamers
 
 [Volume]
-Name=gamers-mongodb-data
-
+# Name derives from filename: gamers-mongodb-data

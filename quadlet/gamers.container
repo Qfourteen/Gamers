@@ -6,7 +6,7 @@ Requires=gamers.network gamers.pod gamers-mongodb.container
 [Container]
 # Build this image locally first: podman build -t gamers:latest -f Containerfile .
 Image=gamers:latest
-Pod=gamers-pod
+Pod=gamers
 
 # Secrets: create with `podman secret create gamers_secret_key -` and provide content
 Secret=gamers_secret_key,type=mount,target=/run/secrets/gamers_secret_key
@@ -15,7 +15,8 @@ Secret=gamers_secret_key,type=mount,target=/run/secrets/gamers_secret_key
 Environment=SECRET_KEY_FILE=/run/secrets/gamers_secret_key
 Environment=MONGODB_URL=mongodb://127.0.0.1:27017
 Environment=SECURE_COOKIE=true
-
 # Expose via pod; no individual PublishPort here
 StopTimeout=10
+
+[Service]
 Restart=always

@@ -4,9 +4,7 @@ After=gamers.network
 Requires=gamers.network
 
 [Pod]
-Name=gamers-pod
-Network=gamers-net
+Network=gamers
 PublishPort=8000:8000
 # Uncomment to expose MongoDB externally (optional)
 # PublishPort=27017:27017
-
