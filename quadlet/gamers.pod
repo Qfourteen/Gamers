@@ -1,0 +1,12 @@
+[Unit]
+Description=Gamers application pod (app + mongodb)
+After=gamers.network
+Requires=gamers.network
+
+[Pod]
+Name=gamers-pod
+Network=gamers-net
+PublishPort=8000:8000
+# Uncomment to expose MongoDB externally (optional)
+# PublishPort=27017:27017
+

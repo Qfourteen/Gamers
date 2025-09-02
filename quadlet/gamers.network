@@ -1,0 +1,7 @@
+[Unit]
+Description=Gamers podman network
+
+[Network]
+Name=gamers-net
+Driver=bridge
+

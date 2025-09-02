@@ -1,0 +1,6 @@
+[Unit]
+Description=MongoDB data volume for Gamers
+
+[Volume]
+Name=gamers-mongodb-data
+
