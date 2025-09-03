@@ -149,7 +149,7 @@ cd src/frontend && vite build
 - Quadlet(`quadlet/`)
   - `gamers.network`: 사용자 정의 네트워크 `gamers-net`
   - `mongodb-data.volume`: 볼륨 `mongodb-data`
-  - `mongodb.container`: `mongo:8` 사용, `27017:27017` 공개, `Network=gamers-net`
+  - `mongodb.container`: `mongo:8` 사용, `27017:27017` 공개, `Network=gamers-net`, `ContainerName=mongo`
   - `gamers.container`: 앱 이미지 `gamers:latest`, `18000:8000` 공개, `LogDriver=journald`, `Network=gamers-net`
     - 환경: `MONGODB_URL=mongodb://admin:adminpass@mongo:27017`, `SECURE_COOKIE=true`
     - Secret: 시크릿 파일 마운트(`/run/secrets/gamers_secret_key`) 후 `SECRET_KEY_FILE`로 경로 전달

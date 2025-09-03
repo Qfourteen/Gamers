@@ -1,16 +1,16 @@
 [Unit]
 Description=MongoDB 8
-After=mongodb-data.volume
-Requires=mongodb-data.volume
+After=mongodb-data.volume gamers.network
+Requires=mongodb-data.volume gamers.network
 
 [Container]
 Image=docker.io/library/mongo:8
-Name=mongo
+ContainerName=mongo
 Environment=MONGO_INITDB_ROOT_USERNAME=admin
 Environment=MONGO_INITDB_ROOT_PASSWORD=adminpass
 Volume=mongodb-data:/data/db
 PublishPort=27017:27017
-Network=gamers-net
+Network=systemd-gamers
 
 [Service]
 Restart=always

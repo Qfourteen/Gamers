@@ -10,7 +10,7 @@ Image=gamers:latest
 Secret=gamers_secret_key,type=mount,target=gamers_secret_key
 Environment=SECRET_KEY_FILE=/run/secrets/gamers_secret_key
 # Shared user-defined network; reach MongoDB by its container name
-Network=gamers-net
+Network=systemd-gamers
 Environment=MONGODB_URL=mongodb://admin:adminpass@mongo:27017
 Environment=SECURE_COOKIE=true
 PublishPort=18000:8000
