@@ -11,12 +11,10 @@ COPY src/frontend ./src/frontend
 RUN npm ci && npm run build
 
 
-# --- Stage 2: Python runtime ---
 FROM python:3.12-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PATH="/home/app/.local/bin:${PATH}"
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
@@ -28,20 +26,13 @@ RUN apt-get update \
 
 # Install Python dependencies first for better cache
 COPY requirements.txt ./
-RUN pip install --user -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy backend and templates
 COPY src/backend ./src/backend
 COPY templates ./templates
 
-# Copy built frontend assets from builder
 COPY --from=frontend_builder /app/src/backend/static/react ./src/backend/static/react
-
-# Create non-root user (rootless-friendly)
-RUN groupadd --system app && useradd --system --home /home/app --gid app app \
-    && mkdir -p /home/app && chown -R app:app /home/app /app
-
-USER app
 
 EXPOSE 8000
 

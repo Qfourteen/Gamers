@@ -5,10 +5,12 @@ Requires=mongodb.container
 
 [Container]
 # Secrets: create with `podman secret create gamers_secret_key -` and provide content
+Image=gamers:latest
 Secret=gamers_secret_key,type=env,target=SECRET_KEY_FILE
 Environment=MONGODB_URL=mongodb://admin:adminpass@localhost:27017
 Environment=SECURE_COOKIE=true
 PublishPort=18000:8000
+LogDriver=journald
 
 [Service]
 Restart=always
