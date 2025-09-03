@@ -1,22 +1,14 @@
 [Unit]
 Description=Gamers FastAPI app container
-After=gamers.network gamers.pod gamers-mongodb.container
-Requires=gamers.network gamers.pod gamers-mongodb.container
+After=mongodb.container
+Requires=mongodb.container
 
 [Container]
-# Build this image locally first: podman build -t gamers:latest -f Containerfile .
-Image=gamers:latest
-Pod=gamers-pod
-
 # Secrets: create with `podman secret create gamers_secret_key -` and provide content
-Secret=gamers_secret_key,type=mount,target=/run/secrets/gamers_secret_key
-
-# Env for app
-Environment=SECRET_KEY_FILE=/run/secrets/gamers_secret_key
-Environment=MONGODB_URL=mongodb://127.0.0.1:27017
+Secret=gamers_secret_key,type=env,target=SECRET_KEY_FILE
+Environment=MONGODB_URL=mongodb://admin:adminpass@localhost:27017
 Environment=SECURE_COOKIE=true
-# Expose via pod; no individual PublishPort here
-StopTimeout=10
+PublishPort=18000:8000
 
 [Service]
 Restart=always

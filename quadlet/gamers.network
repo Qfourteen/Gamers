@@ -1,5 +1,0 @@
-[Unit]
-Description=Gamers podman network
-
-[Network]
-Driver=bridge
