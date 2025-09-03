@@ -106,7 +106,7 @@ npm -v
 npm install
 ```
 
-3. 정적 파일을 빌드합니다. 이 결과물은 `src/backend/static`에 있습니다.
+3. 정적 파일을 빌드합니다. 이 결과물은 `src/backend/static/react`에 생성됩니다.
 ```shell
 cd src/frontend && vite build
 ```
@@ -134,16 +134,25 @@ cd src/frontend && vite build
 
 ## 컨테이너 배포 (Podman, 루트리스)
 
-이 프로젝트는 루트리스 Podman 환경에서 쉽게 빌드/실행되도록 설계되어 있습니다. 프론트엔드는 컨테이너 빌드 시 자동으로 Vite 빌드를 거쳐 정적 파일로 포함됩니다.
+이 프로젝트는 루트리스 Podman 환경에서 쉽게 빌드/실행되도록 설계되어 있습니다. 프론트엔드는 컨테이너 빌드 시 Vite 빌드 결과가 자동으로 포함됩니다.
 
-### 구성 개요
-- `Containerfile`: 멀티 스테이지 빌드(프론트엔드 → Python 런타임). 포트 `8000` 노출, 비루트 사용자(`app`) 실행.
-- `src/backend/env.py`: 환경변수 또는 파일로 비밀/설정을 읽습니다.
-  - `MONGODB_URL` 또는 `MONGODB_URL_FILE`
-  - `SECRET_KEY` 또는 `SECRET_KEY_FILE`
-  - `SECURE_COOKIE` 또는 `SECURE_COOKIE_FILE` (true/false)
-  - `*_FILE`이 설정되면 해당 파일 내용이 우선합니다(Podman 시크릿/마운트 패턴과 호환).
-- Quadlet 유닛: `quadlet/` 아래에 네트워크/볼륨/포드/컨테이너 유닛 포함.
+### 구성 개요(파일 기준)
+- `Containerfile`
+  - 멀티 스테이지: Node 20(slim)에서 프론트엔드 빌드 → Python 3.12(slim) 런타임에 복사
+  - 빌드 산출물 경로: `/app/src/backend/static/react`
+  - `EXPOSE 8000`, 헬스체크 포함(TCP 8000)
+  - 기본 환경: `SECURE_COOKIE=true`
+  - 실행: `uvicorn src.backend.main:app --host 0.0.0.0 --port 8000`
+- `src/backend/env.py`
+  - 설정/시크릿 키를 환경변수 또는 파일로 읽음: `MONGODB_URL`, `SECRET_KEY`, `SECURE_COOKIE`
+  - `*_FILE`이 설정되면 해당 파일 경로의 내용을 우선 사용함
+- Quadlet(`quadlet/`)
+  - `gamers.network`: 사용자 정의 네트워크 `gamers-net`
+  - `mongodb-data.volume`: 볼륨 `mongodb-data`
+  - `mongodb.container`: `mongo:8` 사용, `27017:27017` 공개, `Network=gamers-net`
+  - `gamers.container`: 앱 이미지 `gamers:latest`, `18000:8000` 공개, `LogDriver=journald`, `Network=gamers-net`
+    - 환경: `MONGODB_URL=mongodb://admin:adminpass@mongo:27017`, `SECURE_COOKIE=true`
+    - Secret: 시크릿 파일 마운트(`/run/secrets/gamers_secret_key`) 후 `SECRET_KEY_FILE`로 경로 전달
 
 자세한 가이드는 `docs/deploy/podman.md`를 참고하세요.
 
@@ -152,14 +161,14 @@ cd src/frontend && vite build
 podman build -t gamers:latest -f Containerfile .
 ```
 
-### 2) 시크릿/설정 주입
-- `SECRET_KEY`는 반드시 런타임에 주입하세요(이미지에 포함 금지).
+### 2) 단독 실행 예시(podman run)
+- 시크릿은 컨테이너에 포함하지 말고 런타임에 주입하세요.
 - Podman 시크릿 생성(1회):
 ```bash
-echo -n "<프로덕션_랜덤_시크릿>" | podman secret create gamers_secret_key -
+echo -n "프로덕션_랜덤_시크릿" | podman secret create gamers_secret_key -
 ```
 
-- 단독 실행 예시(호스트 MongoDB 사용):
+- 실행(호스트 MongoDB 사용 예):
 ```bash
 podman run -d \
   --name gamers \
@@ -171,18 +180,12 @@ podman run -d \
   gamers:latest
 ```
 
-개발용 `.env`로도 실행 가능(프로덕션 비권장):
-```bash
-podman run -d --name gamers --env-file .env -p 8000:8000 gamers:latest
-```
-
 ### 3) Quadlet(systemd --user)로 운영
-레포에는 다음 Quadlet 유닛이 포함됩니다.
-- `quadlet/gamers.network`: 브리지 네트워크 `gamers-net`
-- `quadlet/mongodb-data.volume`: 데이터 볼륨 `gamers-mongodb-data`
-- `quadlet/gamers.pod`: 포드 `gamers`(포트 `8000:8000` 공개)
-- `quadlet/mongodb.container`: MongoDB 7 컨테이너(포드에 소속, 볼륨 마운트)
-- `quadlet/gamers.container`: 앱 컨테이너(포드에 소속, 시크릿/환경변수 설정)
+레포에는 다음 Quadlet 유닛이 포함됩니다:
+- `quadlet/gamers.network`
+- `quadlet/mongodb-data.volume`
+- `quadlet/mongodb.container`
+- `quadlet/gamers.container`
 
 설치 및 실행(루트리스):
 ```bash
@@ -190,7 +193,7 @@ podman run -d --name gamers --env-file .env -p 8000:8000 gamers:latest
 podman build -t gamers:latest -f Containerfile .
 
 # 2) 시크릿 준비
-echo -n "<프로덕션_랜덤_시크릿>" | podman secret create gamers_secret_key -
+echo -n "프로덕션_랜덤_시크릿" | podman secret create gamers_secret_key -
 
 # 3) Quadlet 배치
 mkdir -p ~/.config/containers/systemd
@@ -198,31 +201,9 @@ cp -a quadlet/* ~/.config/containers/systemd/
 systemctl --user daemon-reload
 
 # 4) 앱 컨테이너 시작(의존 유닛 자동 생성/시작)
-systemctl --user enable --now gamers.container
+systemctl --user start gamers.container
 
-# 로그 확인
+# 로그 확인(사용자는 systemd-journal 그룹 소속 필요)
 journalctl --user -u gamers.container -f
 journalctl --user -u mongodb.container -f
 ```
-
-포드 사용 시 네트워킹:
-- 포드 내에서 네트워크 네임스페이스를 공유하므로 앱에서 `mongodb://127.0.0.1:27017`로 접속합니다.
-- 외부로는 포드 레벨에서 `8000:8000`만 공개(필요 시 `27017:27017` 주석 해제).
-
-MongoDB 초기 자격증명(샘플):
-- `MONGO_INITDB_ROOT_USERNAME=admin`
-- `MONGO_INITDB_ROOT_PASSWORD=adminpass`
-필요 시 `quadlet/mongodb.container`에서 수정하세요.
-
-중지/삭제:
-```bash
-systemctl --user stop gamers.container
-systemctl --user disable gamers.container
-# 완전 제거 시 데이터 볼륨도 삭제:
-podman volume rm gamers-mongodb-data
-```
-
-### 4) 트러블슈팅
-- Healthcheck 빌드 오류: heredoc 형식은 HEALTHCHECK에서 지원되지 않습니다. 본 `Containerfile`은 원라인 파이썬으로 수정되어 있습니다.
-- SELinux/권한: 볼륨 마운트에 `:Z` 라벨을 사용했습니다. 환경에 따라 `:z` 또는 바인드 마운트를 검토하세요.
-- 외부 DB 연결: 동일 포드가 아니라면 `MONGODB_URL`을 외부 주소로 지정하고, 필요 시 포트 공개를 조정하세요.

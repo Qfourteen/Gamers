@@ -6,11 +6,19 @@ Requires=mongodb.container
 [Container]
 # Secrets: create with `podman secret create gamers_secret_key -` and provide content
 Image=gamers:latest
-Secret=gamers_secret_key,type=env,target=SECRET_KEY_FILE
-Environment=MONGODB_URL=mongodb://admin:adminpass@localhost:27017
+# Mount secret as file and point SECRET_KEY_FILE to it
+Secret=gamers_secret_key,type=mount,target=gamers_secret_key
+Environment=SECRET_KEY_FILE=/run/secrets/gamers_secret_key
+# Shared user-defined network; reach MongoDB by its container name
+Network=gamers-net
+Environment=MONGODB_URL=mongodb://admin:adminpass@mongo:27017
 Environment=SECURE_COOKIE=true
 PublishPort=18000:8000
+# 사용자는 반드시 systemd-journal 그룹에 소속되어 있어야 합니다.
 LogDriver=journald
 
 [Service]
 Restart=always
+
+[Install]
+WantedBy=default.target

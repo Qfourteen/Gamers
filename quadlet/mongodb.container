@@ -10,6 +10,7 @@ Environment=MONGO_INITDB_ROOT_USERNAME=admin
 Environment=MONGO_INITDB_ROOT_PASSWORD=adminpass
 Volume=mongodb-data:/data/db
 PublishPort=27017:27017
+Network=gamers-net
 
 [Service]
 Restart=always
